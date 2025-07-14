@@ -1,0 +1,7 @@
+# Node modules
+node_modules/
+.env
+logs/
+serviceAccountKey.json
+google-services.json
+shop_app.pem
