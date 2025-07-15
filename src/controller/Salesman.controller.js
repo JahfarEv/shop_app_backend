@@ -81,9 +81,9 @@ const registerSalesman = async (req, res) => {
 // =============================================================================================
 const loginSalesman = async (req, res) => {
   try {
-    const { mobileNumber, password } = req.body;
+    const { email, password } = req.body;
 
-    const salesman = await Salesman.findOne({ mobileNumber });
+    const salesman = await Salesman.findOne({ email });
     if (!salesman || !salesman.isApproved)
       return res.status(401).json({ message: 'Unauthorized' });
 
@@ -105,7 +105,39 @@ const loginSalesman = async (req, res) => {
   }
 };
 
+const getSalesmanById = async (req, res) => {
+
+  const { id } = req.params;
+
+  try {
+    // 🔍 Find salesman by ID and populate manager and shops
+    const salesman = await Salesman.findById(id)
+      .populate('manager', 'name mobileNumber email') // Populate manager details
+      .populate('shopsAddedBySalesman', 'name location'); // Optional
+
+    if (!salesman) {
+      return res.status(404).json({ message: 'Salesman not found' });
+    }
+
+    const salesmanData = salesman.toObject();
+    delete salesmanData.password; // 🔐 Hide sensitive info
+
+    res.status(200).json({
+      message: 'Salesman details fetched successfully',
+      salesman: salesmanData
+    });
+
+  } catch (err) {
+    res.status(400).json({
+      message: 'Invalid salesman ID or server error',
+      error: err.message
+    });
+  }
+};
+
+
 module.exports = {
   registerSalesman,
-  loginSalesman
+  loginSalesman,
+  getSalesmanById
 };
