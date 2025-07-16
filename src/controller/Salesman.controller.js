@@ -81,9 +81,9 @@ const registerSalesman = async (req, res) => {
 // =============================================================================================
 const loginSalesman = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { mobileNumber, password } = req.body;
 
-    const salesman = await Salesman.findOne({ email });
+    const salesman = await Salesman.findOne({ mobileNumber });
     if (!salesman || !salesman.isApproved)
       return res.status(401).json({ message: 'Unauthorized' });
 
