@@ -25,7 +25,7 @@ const createShop = async (req, res) => {
       email,
       mobileNumber,
       landlineNumber,
-      agentCode, // ✅ optional field
+      agentCode, 
     } = req.body;
 
     let imageUrl = null;
