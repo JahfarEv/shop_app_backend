@@ -34,13 +34,18 @@ const placeOrderController = async (req, res) => {
   try {
     const { items, addressId, totalCartAmount } = req.body;
     const userId = req.user.id;
+console.log(userId,'user');
 
     // =============================================================================================
     // 🔍 FETCH USER & DELIVERY ADDRESS
     // =============================================================================================
     const user = await User.findById(userId);
     const addressDoc = await DeliveryAddress.findOne({ userId });
-    const selectedAddress = addressDoc?.addresses?.id(addressId);
+    console.log(addressDoc,'add');
+    
+const selectedAddress = addressDoc?.addresses?.id(addressId);
+console.log('Looking for addressId:', addressId);
+console.log('Available addresses:', addressDoc?.addresses?.map(a => a._id.toString()));
 
     if (!selectedAddress) {
       return res.status(404).json({ message: "Address not found" });
