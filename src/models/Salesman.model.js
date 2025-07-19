@@ -21,6 +21,10 @@ const salesmanSchema = new mongoose.Schema({
 
   // Shops added using this salesman's agent codes
   shopsAddedBySalesman: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Shop' }],
+  salesCommissionEarned: {
+    type: Number,
+    default: 0
+  },
 
   // Admin approval required before login
   isApproved: { type: Boolean, default: false }

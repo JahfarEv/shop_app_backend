@@ -1,99 +1,107 @@
-const adminModel = require('../models/admin');
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
-const { info, error, debug } = require('../middleware/logger'); 
-const Salesman = require('../models/Salesman.model');
-const MarketingManager = require('../models/MarketingManager.model');
-
+const adminModel = require("../models/admin");
+const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
+const { info, error, debug } = require("../middleware/logger");
+const Salesman = require("../models/Salesman.model");
+const MarketingManager = require("../models/MarketingManager.model");
+const SalesCommissionSettings = require("../models/salesCommisionSettings");
 
 const handleAdminRegister = async (req, res) => {
-    try {
-      const { name, email, mobileNumber } = req.body;
-      
-      debug(`Admin registration attempt: ${email || mobileNumber}`);
-      
-      if (!req.body.password) {
-        info(`Registration failed: Missing password for ${email || mobileNumber}`);
-        return res.status(400).json({ message: "Password is required" });
-      }
-  
-      const existingAdmin = await adminModel.findOne({ 
-        $or: [{ email }, { mobileNumber }] 
-      });
-  
-      if (existingAdmin) {
-        info(`Registration failed: Admin already exists - ${email || mobileNumber}`);
-        return res.status(400).json({ message: "Admin already exists" });
-      }
-  
-      const hashedPassword = await bcrypt.hash(req.body.password, 10);
-  
-      const adminData = { name, password: hashedPassword };
-  
-      if (email) adminData.email = email;
-      if (mobileNumber) adminData.mobileNumber = mobileNumber;
-  
-      const newAdmin = await adminModel.create(adminData);
-      
-      const token = jwt.sign(
-        { id: newAdmin._id, role: "admin" },
-        process.env.JWT_SECRET,
-        { expiresIn: "365d" }
+  try {
+    const { name, email, mobileNumber } = req.body;
+
+    debug(`Admin registration attempt: ${email || mobileNumber}`);
+
+    if (!req.body.password) {
+      info(
+        `Registration failed: Missing password for ${email || mobileNumber}`
       );
-      
-      info(`Admin registered successfully: ${email || mobileNumber} (ID: ${newAdmin._id})`);
-      return res.status(201).json({ message: "Admin registered", token });
-    } catch (error) {
-      error(`Admin registration error: ${error.message}`);
-      return res.status(500).json({ message: error.message });
+      return res.status(400).json({ message: "Password is required" });
     }
+
+    const existingAdmin = await adminModel.findOne({
+      $or: [{ email }, { mobileNumber }],
+    });
+
+    if (existingAdmin) {
+      info(
+        `Registration failed: Admin already exists - ${email || mobileNumber}`
+      );
+      return res.status(400).json({ message: "Admin already exists" });
+    }
+
+    const hashedPassword = await bcrypt.hash(req.body.password, 10);
+
+    const adminData = { name, password: hashedPassword };
+
+    if (email) adminData.email = email;
+    if (mobileNumber) adminData.mobileNumber = mobileNumber;
+
+    const newAdmin = await adminModel.create(adminData);
+
+    const token = jwt.sign(
+      { id: newAdmin._id, role: "admin" },
+      process.env.JWT_SECRET,
+      { expiresIn: "365d" }
+    );
+
+    info(
+      `Admin registered successfully: ${email || mobileNumber} (ID: ${
+        newAdmin._id
+      })`
+    );
+    return res.status(201).json({ message: "Admin registered", token });
+  } catch (error) {
+    error(`Admin registration error: ${error.message}`);
+    return res.status(500).json({ message: error.message });
+  }
 };
 
 const handleAdminLogin = async (req, res) => {
-    try {
-        const { email, mobileNumber } = req.body;
-        
-        debug(`Admin login attempt: ${email || mobileNumber}`);
-        
-        if (!req.body.password) {
-            info(`Login failed: Missing password for ${email || mobileNumber}`);
-            return res.status(400).json({ message: "Password is required" });
-        }
-        
-        const admin = await adminModel.findOne({
-            $or: [{ email }, { mobileNumber }],
-        });
-        
-        if (!admin) {
-            info(`Login failed: Admin not found - ${email || mobileNumber}`);
-            return res.status(400).json({ message: "Admin not found" });
-        }
-        
-        const isMatch = await bcrypt.compare(req.body.password, admin.password);
-        
-        if (!isMatch) {
-            info(`Login failed: Invalid credentials for ${email || mobileNumber}`);
-            return res.status(400).json({ message: "Invalid credentials" });
-        }
-        
-        const token = jwt.sign(
-            { id: admin._id, role: "admin" },
-            process.env.JWT_SECRET,
-            { expiresIn: "365d" }
-        );
-        
-        const { password: _, ...adminDetails } = admin.toObject();
-        
-        info(`Admin login successful: ${email || mobileNumber} (ID: ${admin._id})`);
-        return res.status(200).json({
-            message: "Login successful",
-            token,
-            admin: adminDetails
-        });
-    } catch (err) {
-        error(`Admin login error: ${err.message}`);
-        return res.status(500).json({ message: err.message });
+  try {
+    const { email, mobileNumber } = req.body;
+
+    debug(`Admin login attempt: ${email || mobileNumber}`);
+
+    if (!req.body.password) {
+      info(`Login failed: Missing password for ${email || mobileNumber}`);
+      return res.status(400).json({ message: "Password is required" });
     }
+
+    const admin = await adminModel.findOne({
+      $or: [{ email }, { mobileNumber }],
+    });
+
+    if (!admin) {
+      info(`Login failed: Admin not found - ${email || mobileNumber}`);
+      return res.status(400).json({ message: "Admin not found" });
+    }
+
+    const isMatch = await bcrypt.compare(req.body.password, admin.password);
+
+    if (!isMatch) {
+      info(`Login failed: Invalid credentials for ${email || mobileNumber}`);
+      return res.status(400).json({ message: "Invalid credentials" });
+    }
+
+    const token = jwt.sign(
+      { id: admin._id, role: "admin" },
+      process.env.JWT_SECRET,
+      { expiresIn: "365d" }
+    );
+
+    const { password: _, ...adminDetails } = admin.toObject();
+
+    info(`Admin login successful: ${email || mobileNumber} (ID: ${admin._id})`);
+    return res.status(200).json({
+      message: "Login successful",
+      token,
+      admin: adminDetails,
+    });
+  } catch (err) {
+    error(`Admin login error: ${err.message}`);
+    return res.status(500).json({ message: err.message });
+  }
 };
 
 // =============================================================================================
@@ -105,7 +113,7 @@ const assignAgentCodeToSalesman = async (req, res) => {
     const { agentCode } = req.body;
 
     if (!agentCode) {
-      return res.status(400).json({ message: 'Agent code is required' });
+      return res.status(400).json({ message: "Agent code is required" });
     }
 
     const updatedSalesman = await Salesman.findByIdAndUpdate(
@@ -115,19 +123,17 @@ const assignAgentCodeToSalesman = async (req, res) => {
     );
 
     if (!updatedSalesman) {
-      return res.status(404).json({ message: 'Salesman not found' });
+      return res.status(404).json({ message: "Salesman not found" });
     }
 
     res.status(200).json({
-      message: 'Agent code assigned successfully',
+      message: "Agent code assigned successfully",
       updatedSalesman,
     });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
-
-
 
 // =============================================================================================
 // ✅ Approve Marketing Manager
@@ -141,9 +147,9 @@ const approveManager = async (req, res) => {
       { new: true }
     );
 
-    if (!updated) return res.status(404).json({ message: 'Manager not found' });
+    if (!updated) return res.status(404).json({ message: "Manager not found" });
 
-    res.json({ message: 'Manager approved successfully', manager: updated });
+    res.json({ message: "Manager approved successfully", manager: updated });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -161,19 +167,108 @@ const approveSalesman = async (req, res) => {
       { new: true }
     );
 
-    if (!updated) return res.status(404).json({ message: 'Salesman not found' });
+    if (!updated)
+      return res.status(404).json({ message: "Salesman not found" });
 
-    res.json({ message: 'Salesman approved successfully', salesman: updated });
+    res.json({ message: "Salesman approved successfully", salesman: updated });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
 
+const setSalesmanCommision = async (req, res) => {
+  const { amount } = req.body;
+
+  try {
+    const settings = await SalesCommissionSettings.findOne();
+
+    if (!settings) {
+      return res.status(404).json({ message: "Commission settings not found" });
+    }
+
+    settings.salesmanCommission = amount;
+    settings.updatedAt = new Date();
+
+    await settings.save();
+
+    res.status(200).json({ message: "Salesman commission updated", amount });
+  } catch (err) {
+    res
+      .status(500)
+      .json({ message: "Error updating commission", error: err.message });
+  }
+};
+
+const setManagerCommision = async (req, res) => {
+  const { amount } = req.body;
+
+  try {
+    const settings = await SalesCommissionSettings.findOne();
+
+    if (!settings) {
+      return res.status(404).json({ message: "Commission settings not found" });
+    }
+
+    settings.managerCommission = amount;
+    settings.updatedAt = new Date();
+
+    await settings.save();
+
+    res.status(200).json({ message: "Salesman commission updated", amount });
+  } catch (err) {
+    res
+      .status(500)
+      .json({ message: "Error updating commission", error: err.message });
+  }
+};
+
+const getSalesmanCommission = async (req, res) => {
+  try {
+    const settings = await SalesCommissionSettings.findOne();
+
+    if (!settings) {
+      return res.status(404).json({ message: "Salesman commission not found" });
+    }
+
+    res.status(200).json({
+      salesmanCommission: settings.salesmanCommission || 0,
+    });
+  } catch (err) {
+    res.status(500).json({
+      message: "Failed to fetch salesman commission",
+      error: err.message,
+    });
+  }
+};
+
+const getManagerCommission = async (req, res) => {
+  try {
+    const settings = await SalesCommissionSettings.findOne();
+
+    if (!settings) {
+      return res.status(404).json({ message: "Manager commission not found" });
+    }
+
+    res.status(200).json({
+      managerCommission: settings.managerCommission || 0,
+    });
+  } catch (err) {
+    res.status(500).json({
+      message: "Failed to fetch manager commission",
+      error: err.message,
+    });
+  }
+};
+
 
 module.exports = {
-    handleAdminRegister,
-    handleAdminLogin,
-    assignAgentCodeToSalesman,
-    approveManager,
+  handleAdminRegister,
+  handleAdminLogin,
+  assignAgentCodeToSalesman,
+  approveManager,
   approveSalesman,
+  setSalesmanCommision,
+  setManagerCommision,
+  getSalesmanCommission,
+  getManagerCommission
 };
