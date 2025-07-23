@@ -8,7 +8,7 @@ const userModel = require("../models/user");
 const Notification = require("../models/notificationModel"); // ✅ Add this
 const admin = require("../config/admin");
 const Salesman = require("../models/Salesman.model");
-const CommissionSettings = require("../models/salesCommisionSettings")
+const CommissionSettings = require("../models/salesmanCommisionSettings")
 
 
 // ✅ Create Shop 

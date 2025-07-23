@@ -8,8 +8,8 @@ const {handleStartSubscription,handleCheckSubscriptionStatus,handleGetAllSubscri
 const { assignAgentCodeToSalesman } = require('../controller/adminAuth.controller');
 const { verifyToken,verifyAdmin } = require("../middleware/verifyToken");
 const { approveManager, approveSalesman } = require('../controller/adminAuth.controller');
-const {setSalesmanCommision} = require("../controller/adminAuth.controller");
-const {setManagerCommision} = require("../controller/adminAuth.controller");
+const {setSalesmanCommission} = require("../controller/adminAuth.controller");
+const {setManagerCommission} = require("../controller/adminAuth.controller");
 const {getSalesmanCommission} = require("../controller/adminAuth.controller");
 const {getManagerCommission} = require("../controller/adminAuth.controller");
 
@@ -62,10 +62,10 @@ router.patch('/approve/manager/:managerId', approveManager);
 router.patch('/approve/salesman/:salesmanId', approveSalesman);
 
 
-router.put('/commision/salesman', setSalesmanCommision);
-router.put('/commision/manager', setManagerCommision);
-router.get('/get-commision/salesman',getSalesmanCommission);
-router.get('/get-commision/manager', getManagerCommission)
+router.put('/commission/salesman', setSalesmanCommission);
+router.put('/commission/manager', setManagerCommission);
+router.get('/get-commission/salesman',getSalesmanCommission);
+router.get('/get-commission/manager', getManagerCommission)
 
 
 

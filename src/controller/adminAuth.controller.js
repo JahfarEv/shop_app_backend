@@ -4,7 +4,8 @@ const jwt = require("jsonwebtoken");
 const { info, error, debug } = require("../middleware/logger");
 const Salesman = require("../models/Salesman.model");
 const MarketingManager = require("../models/MarketingManager.model");
-const SalesCommissionSettings = require("../models/salesCommisionSettings");
+const SalesmanCommissionSettings = require("../models/salesmanCommisionSettings");
+const ManagerCommisionSettings = require("../models/managerCommisionSettings")
 
 const handleAdminRegister = async (req, res) => {
   try {
@@ -176,66 +177,104 @@ const approveSalesman = async (req, res) => {
   }
 };
 
-const setSalesmanCommision = async (req, res) => {
-  const { amount } = req.body;
+
+const setSalesmanCommission = async (req, res) => {
+  const { amount, salesTarget, subscriptionCommission } = req.body;
 
   try {
-    const settings = await SalesCommissionSettings.findOne();
+    let settings = await SalesmanCommissionSettings.findOne();
 
+    // If no document exists, create one
     if (!settings) {
-      return res.status(404).json({ message: "Commission settings not found" });
+      settings = new SalesmanCommissionSettings();
     }
 
-    settings.salesmanCommission = amount;
+    // Update fields if provided
+    if (amount !== undefined) settings.salesCommission = amount;
+    if (salesTarget !== undefined) settings.salesTarget = salesTarget;
+    if (subscriptionCommission !== undefined) settings.subscriptionCommission = subscriptionCommission;
+
     settings.updatedAt = new Date();
 
     await settings.save();
 
-    res.status(200).json({ message: "Salesman commission updated", amount });
+    res.status(200).json({
+      message: "Salesman commission settings updated successfully",
+      updatedSettings: {
+        salesmanCommission: settings.salesmanCommission,
+        salesTarget: settings.salesTarget,
+        subscriptionCommission: settings.subscriptionCommission,
+      },
+    });
   } catch (err) {
-    res
-      .status(500)
-      .json({ message: "Error updating commission", error: err.message });
+    res.status(500).json({
+      message: "Error updating salesman commission settings",
+      error: err.message,
+    });
   }
 };
 
-const setManagerCommision = async (req, res) => {
-  const { amount } = req.body;
+
+
+const setManagerCommission = async (req, res) => {
+ const { amount, salesTarget, subscriptionCommission } = req.body;
 
   try {
-    const settings = await SalesCommissionSettings.findOne();
+    let settings = await ManagerCommisionSettings.findOne();
 
+    // If no document exists, create one
     if (!settings) {
-      return res.status(404).json({ message: "Commission settings not found" });
+      settings = new ManagerCommisionSettings();
     }
 
-    settings.managerCommission = amount;
+    // Update fields if provided
+    if (amount !== undefined) settings.salesCommission = amount;
+    if (salesTarget !== undefined) settings.salesTarget = salesTarget;
+    if (subscriptionCommission !== undefined) settings.subscriptionCommission = subscriptionCommission;
+
     settings.updatedAt = new Date();
 
     await settings.save();
 
-    res.status(200).json({ message: "Salesman commission updated", amount });
+    res.status(200).json({
+      message: "Salesman commission settings updated successfully",
+      updatedSettings: {
+        salesmanCommission: settings.salesmanCommission,
+        salesTarget: settings.salesTarget,
+        subscriptionCommission: settings.subscriptionCommission,
+      },
+    });
   } catch (err) {
-    res
-      .status(500)
-      .json({ message: "Error updating commission", error: err.message });
+    res.status(500).json({
+      message: "Error updating salesman commission settings",
+      error: err.message,
+    });
   }
 };
+
+
+
 
 const getSalesmanCommission = async (req, res) => {
   try {
-    const settings = await SalesCommissionSettings.findOne();
+    const settings = await SalesmanCommissionSettings.findOne();
 
     if (!settings) {
       return res.status(404).json({ message: "Salesman commission not found" });
     }
 
-    res.status(200).json({
-      salesmanCommission: settings.salesmanCommission || 0,
+   res.status(200).json({
+      message: "Salesman commission settings fetched successfully",
+      settings: {
+        salesmanCommission: settings.salesCommission,
+        salesTarget: settings.salesTarget,
+        subscriptionCommission: settings.subscriptionCommission,
+        updatedAt: settings.updatedAt,
+      },
     });
   } catch (err) {
     res.status(500).json({
-      message: "Failed to fetch salesman commission",
+      message: "Error fetching salesman commission settings",
       error: err.message,
     });
   }
@@ -243,23 +282,28 @@ const getSalesmanCommission = async (req, res) => {
 
 const getManagerCommission = async (req, res) => {
   try {
-    const settings = await SalesCommissionSettings.findOne();
+    const settings = await ManagerCommisionSettings.findOne();
 
     if (!settings) {
-      return res.status(404).json({ message: "Manager commission not found" });
+      return res.status(404).json({ message: "Salesman commission not found" });
     }
 
-    res.status(200).json({
-      managerCommission: settings.managerCommission || 0,
+   res.status(200).json({
+      message: "Salesman commission settings fetched successfully",
+      settings: {
+        managerCommission: settings.salesCommission,
+        salesTarget: settings.salesTarget,
+        subscriptionCommission: settings.subscriptionCommission,
+        updatedAt: settings.updatedAt,
+      },
     });
   } catch (err) {
     res.status(500).json({
-      message: "Failed to fetch manager commission",
+      message: "Error fetching salesman commission settings",
       error: err.message,
     });
   }
 };
-
 
 module.exports = {
   handleAdminRegister,
@@ -267,8 +311,8 @@ module.exports = {
   assignAgentCodeToSalesman,
   approveManager,
   approveSalesman,
-  setSalesmanCommision,
-  setManagerCommision,
+  setSalesmanCommission,
+  setManagerCommission,
   getSalesmanCommission,
   getManagerCommission
 };
