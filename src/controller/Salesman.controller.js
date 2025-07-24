@@ -6,6 +6,79 @@ const Salesman = require('../models/Salesman.model');
 // =============================================================================================
 // 📥 Register Salesman
 // =============================================================================================
+// const registerSalesman = async (req, res) => {
+//   try {
+//     const {
+//       name,
+//       mobileNumber,
+//       email,
+//       ifscCode,
+//       bankAccountNumber,
+//       bankName,          // ✅ newly added
+//       password,
+//       managerMobile,
+//       managerName,
+      
+//     } = req.body;
+
+//     const agentCode = `AG-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+//     const hashedPassword = await bcrypt.hash(password, 10);
+
+//     const salesmanData = {
+//       name,
+//       mobileNumber,
+//       email,
+//       ifscCode,
+//       bankAccountNumber,
+//       bankName,          // ✅ added to data
+//       password: hashedPassword,
+//       agentCode: [agentCode] // storing as array
+//     };
+
+//     let assignedManager = null;
+
+//     // 🔗 Link manager if both mobile and name are provided
+//     if (managerMobile && managerName) {
+//       const mgr = await MarketingManager.findOne({
+//         mobileNumber: managerMobile,
+//         name: managerName,
+//         isApproved: true
+//       });
+
+//       if (mgr) {
+//         salesmanData.manager = mgr._id;
+//         assignedManager = mgr;
+//       }
+//     }
+
+//     // 💾 Save salesman
+//     const newSalesman = new Salesman(salesmanData);
+//     await newSalesman.save();
+
+//     // 📎 If manager assigned, push this salesman to their assignedSalesmen list
+//     if (assignedManager) {
+//       assignedManager.assignedSalesmen.push(newSalesman._id);
+//       await assignedManager.save();
+//     }
+
+//     const token = jwt.sign({ id: newSalesman._id, role: 'salesman' }, process.env.JWT_SECRET, { expiresIn: '8h' });
+
+//     const salesmanResponse = newSalesman.toObject();
+//     delete salesmanResponse.password;
+
+//     res.status(201).json({
+//       message: 'Registered. Await admin approval.',
+//       token,
+//       salesman: salesmanResponse
+//     });
+
+//   } catch (err) {
+//     res.status(400).json({ message: err.message });
+//   }
+// };
+
+
+
 const registerSalesman = async (req, res) => {
   try {
     const {
@@ -14,10 +87,11 @@ const registerSalesman = async (req, res) => {
       email,
       ifscCode,
       bankAccountNumber,
-      bankName,          // ✅ newly added
+      bankName,          // ✅ existing
+      pancardNumber,     // ✅ newly added
       password,
       managerMobile,
-      managerName
+      managerName,
     } = req.body;
 
     const agentCode = `AG-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
@@ -29,14 +103,14 @@ const registerSalesman = async (req, res) => {
       email,
       ifscCode,
       bankAccountNumber,
-      bankName,          // ✅ added to data
+      bankName,
+      pancardNumber,     // ✅ added to data
       password: hashedPassword,
-      agentCode: [agentCode] // storing as array
+      agentCode: [agentCode]
     };
 
     let assignedManager = null;
 
-    // 🔗 Link manager if both mobile and name are provided
     if (managerMobile && managerName) {
       const mgr = await MarketingManager.findOne({
         mobileNumber: managerMobile,
@@ -50,17 +124,19 @@ const registerSalesman = async (req, res) => {
       }
     }
 
-    // 💾 Save salesman
     const newSalesman = new Salesman(salesmanData);
     await newSalesman.save();
 
-    // 📎 If manager assigned, push this salesman to their assignedSalesmen list
     if (assignedManager) {
       assignedManager.assignedSalesmen.push(newSalesman._id);
       await assignedManager.save();
     }
 
-    const token = jwt.sign({ id: newSalesman._id, role: 'salesman' }, process.env.JWT_SECRET, { expiresIn: '8h' });
+    const token = jwt.sign(
+      { id: newSalesman._id, role: 'salesman' },
+      process.env.JWT_SECRET,
+      { expiresIn: '8h' }
+    );
 
     const salesmanResponse = newSalesman.toObject();
     delete salesmanResponse.password;
@@ -75,6 +151,7 @@ const registerSalesman = async (req, res) => {
     res.status(400).json({ message: err.message });
   }
 };
+
 
 // =============================================================================================
 // 🔐 Login Salesman

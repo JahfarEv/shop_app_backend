@@ -12,6 +12,7 @@ const salesmanSchema = new mongoose.Schema({
   ifscCode: { type: String, required: true },
   bankAccountNumber: { type: String, required: true },
   bankName: { type: String, required: true }, // ✅ added bank name
+pancardNumber: { type: String },
 
   // Link to manager (optional)
   manager: { type: mongoose.Schema.Types.ObjectId, ref: 'MarketingManager', default: null },
