@@ -86,7 +86,22 @@ const loginManager = async (req, res) => {
   }
 };
 
+// controllers/marketingManagerController.js
+
+
+const getAllManagers = async (req, res) => {
+  try {
+    const managers = await MarketingManager.find({}, 'name mobileNumber email');
+    res.status(200).json(managers);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+
+
 module.exports = {
   registerManager,
-  loginManager
+  loginManager,
+  getAllManagers
 };
