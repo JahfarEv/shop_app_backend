@@ -14,6 +14,7 @@ const registerManager = async (req, res) => {
       ifscCode,
       bankAccountNumber,
       bankName, // ✅ newly added
+      pancardNumber,
       password
     } = req.body;
 
@@ -26,6 +27,7 @@ const registerManager = async (req, res) => {
       ifscCode,
       bankAccountNumber,
       bankName, // ✅ added here too
+      pancardNumber,
       password: hashedPassword
     });
 

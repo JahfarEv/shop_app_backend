@@ -78,7 +78,6 @@ const Salesman = require('../models/Salesman.model');
 // };
 
 
-
 const registerSalesman = async (req, res) => {
   try {
     const {
@@ -87,11 +86,10 @@ const registerSalesman = async (req, res) => {
       email,
       ifscCode,
       bankAccountNumber,
-      bankName,          // ✅ existing
-      pancardNumber,     // ✅ newly added
+      bankName,
+      pancardNumber,
       password,
-      managerMobile,
-      managerName,
+      managerId, // ✅ optional manager ID
     } = req.body;
 
     const agentCode = `AG-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
@@ -104,18 +102,18 @@ const registerSalesman = async (req, res) => {
       ifscCode,
       bankAccountNumber,
       bankName,
-      pancardNumber,     // ✅ added to data
+      pancardNumber,
       password: hashedPassword,
-      agentCode: [agentCode]
+      agentCode: [agentCode],
     };
 
     let assignedManager = null;
 
-    if (managerMobile && managerName) {
+    // If managerId is provided, validate it and assign
+    if (managerId) {
       const mgr = await MarketingManager.findOne({
-        mobileNumber: managerMobile,
-        name: managerName,
-        isApproved: true
+        _id: managerId,
+        isApproved: true,
       });
 
       if (mgr) {
@@ -127,6 +125,7 @@ const registerSalesman = async (req, res) => {
     const newSalesman = new Salesman(salesmanData);
     await newSalesman.save();
 
+    // Add salesman to manager's list if assigned
     if (assignedManager) {
       assignedManager.assignedSalesmen.push(newSalesman._id);
       await assignedManager.save();
@@ -144,7 +143,7 @@ const registerSalesman = async (req, res) => {
     res.status(201).json({
       message: 'Registered. Await admin approval.',
       token,
-      salesman: salesmanResponse
+      salesman: salesmanResponse,
     });
 
   } catch (err) {

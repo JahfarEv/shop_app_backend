@@ -12,6 +12,7 @@ const marketingManagerSchema = new mongoose.Schema({
   ifscCode: { type: String, required: true },
   bankAccountNumber: { type: String, required: true },
   bankName: { type: String, required: true }, // ✅ added bank name
+pancardNumber: { type: String },
 
   isApproved: { type: Boolean, default: false },
   assignedSalesmen: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Salesman' }]
