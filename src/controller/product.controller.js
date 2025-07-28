@@ -523,7 +523,7 @@ const searchProducts = async (req, res) => {
       products = await productModel.find({
         name: { $regex: nameRegex },
         shop: { $in: shopIds },
-      });
+}).populate("shop");
 
       return res.status(200).json({ success: true, data: products });
     }
@@ -533,7 +533,7 @@ const searchProducts = async (req, res) => {
       const nameRegex = new RegExp(productName, "i");
 
       const all = await productModel.find({ name: { $regex: nameRegex } })
-        .populate("shop", "isBanned");
+  .populate("shop"); // if you want full shop details
 
       products = all.filter(p => p.shop && !p.shop.isBanned);
       return res.status(200).json({ success: true, data: products });
@@ -552,7 +552,7 @@ const searchProducts = async (req, res) => {
       }
 
       const shopIds = matchingShops.map(shop => shop._id);
-      products = await productModel.find({ shop: { $in: shopIds } });
+      products = await productModel.find({ shop: { $in: shopIds } }).populate("shop");;
 
       return res.status(200).json({ success: true, data: products });
     }

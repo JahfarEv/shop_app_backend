@@ -154,7 +154,6 @@ const createShop = async (req, res) => {
       imageUrl = result.secure_url;
       fs.unlinkSync(req.file.path);
     }
-console.log('agent', agentCode);
 
     // ✅ Check if agent code matches any Salesman
     let matchedSalesman = null;
@@ -442,7 +441,7 @@ const searchShopController = async (req, res) => {
 
     // 🔎 Find all matching shops
     const shops = await Shop.find({
-       isBanned: false,                       // it will not include the banned shop in the search 
+       isBanned: false,                        
       $or: [
         { shopName: { $regex: regex } },
         { category: { $in: [regex] } }

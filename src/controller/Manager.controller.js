@@ -99,9 +99,42 @@ const getAllManagers = async (req, res) => {
 };
 
 
+const getManagerById = async (req, res) => {
+
+  const { id } = req.params;
+
+  try {
+    // 🔍 Find salesman by ID and populate manager and shops
+    const manager = await MarketingManager.findById(id)
+      // .populate('manager', 'name mobileNumber email') // Populate manager details
+      // .populate('shopsAddedByManager', 'name location'); // Optional
+
+    if (!manager) {
+      return res.status(404).json({ message: 'manager not found' });
+    }
+
+    const managerData = manager.toObject();
+    delete managerData.password; // 🔐 Hide sensitive info
+
+    res.status(200).json({
+      message: 'Manager details fetched successfully',
+      manager: managerData
+    });
+
+  } catch (err) {
+    res.status(400).json({
+      message: 'Invalid salesman ID or server error',
+      error: err.message
+    });
+  }
+};
+
+
+
 
 module.exports = {
   registerManager,
   loginManager,
-  getAllManagers
+  getAllManagers,
+  getManagerById
 };

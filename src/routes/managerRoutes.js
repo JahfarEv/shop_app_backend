@@ -2,7 +2,8 @@ const express = require('express');
 const {
   registerManager,
   loginManager,
-  getAllManagers
+  getAllManagers,
+  getManagerById
 } = require('../controller/Manager.controller'); // adjust path if needed
 
 const {verifyManager,verifySalesman,verifyToken} = require("../middleware/verifyToken");
@@ -13,6 +14,7 @@ const router = express.Router();
 router.post('/register',registerManager);
 router.post('/login', loginManager);
 router.get('/managers', getAllManagers)
+router.get('/details/:id', getManagerById)
 router.get('/test-token',verifyToken,verifyManager, (req,res)=>{
 
   res.send("test pass");
