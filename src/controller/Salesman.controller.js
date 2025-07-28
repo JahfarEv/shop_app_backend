@@ -113,7 +113,7 @@ const registerSalesman = async (req, res) => {
     if (managerId) {
       const mgr = await MarketingManager.findOne({
         _id: managerId,
-        isApproved: true,
+        // isApproved: true,
       });
 
       if (mgr) {

@@ -11,6 +11,7 @@ const User = require("../models/user");
 const Product = require("../models/product");
 const admin = require("../config/admin");
 const Notification = require("../models/notificationModel");
+const userModel = require("../models/user");
 
 // =================================================================================================
 // ====================================== 🟢 CREATE PRODUCT =========================================
@@ -384,14 +385,118 @@ async function getNearbyProductsController(req, res) {
 
 // search bar filter controller which sends the product when we search either product namr or locality or place
 
+// const searchProducts = async (req, res) => {
+//   const { productName, location } = req.params;
+
+//   const validProductName = productName && productName !== "null" && productName !== "undefined";
+//   const validLocation = location && location !== "null" && location !== "undefined";
+
+//   if (!validProductName && !validLocation) {
+//     return res.status(StatusCodes.BAD_REQUEST).json({
+//       success: false,
+//       message: "Please provide at least one search term in the params: productName or location.",
+//     });
+//   }
+
+//   try {
+//     let products = [];
+
+//     // 🔍 If both productName and location are provided
+//     if (validProductName && validLocation) {
+//       const shopRegex = new RegExp(location, "i");
+
+//       const matchingShops = await shopModel.find({
+//         isBanned: false, // ✅ Only include non-banned shops
+//         $or: [{ locality: { $regex: shopRegex } }, { place: { $regex: shopRegex } }],
+//       }, "_id");
+
+//       if (matchingShops.length === 0) {
+//         return res.status(StatusCodes.NOT_FOUND).json({
+//           success: false,
+//           message: "No shops found for the given location.",
+//         });
+//       }
+
+//       const shopIds = matchingShops.map(shop => shop._id);
+//       const nameRegex = new RegExp(productName, "i");
+
+//       products = await productModel.find({
+//         name: { $regex: nameRegex },
+//         shop: { $in: shopIds },
+//       });
+
+//       return res.status(StatusCodes.OK).json({ success: true, data: products });
+//     }
+
+//     // 🔍 If only productName is provided
+//     if (validProductName) {
+//       const nameRegex = new RegExp(productName, "i");
+
+//       const all = await productModel.find({ name: { $regex: nameRegex } })
+//         .populate("shop", "isBanned");
+
+//       // ✅ Filter products from non-banned shops only
+//       products = all.filter(p => p.shop && !p.shop.isBanned);
+
+//       return res.status(StatusCodes.OK).json({ success: true, data: products });
+//     }
+
+//     // 🔍 If only location is provided
+//     if (validLocation) {
+//       const shopRegex = new RegExp(location, "i");
+
+//       const matchingShops = await shopModel.find({
+//         isBanned: false, // ✅ Only include non-banned shops
+//         $or: [{ locality: { $regex: shopRegex } }, { place: { $regex: shopRegex } }],
+//       }, "_id");
+
+//       if (matchingShops.length === 0) {
+//         return res.status(StatusCodes.NOT_FOUND).json({
+//           success: false,
+//           message: "No shops found for the given location.",
+//         });
+//       }
+
+//       const shopIds = matchingShops.map(shop => shop._id);
+//       products = await productModel.find({ shop: { $in: shopIds } });
+
+//       return res.status(StatusCodes.OK).json({ success: true, data: products });
+//     }
+
+//   } catch (err) {
+//     console.error(`Search error - ${err.message}`);
+//     return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+//       success: false,
+//       message: "Server error",
+//     });
+//   }
+// };
+
+
 const searchProducts = async (req, res) => {
-  const { productName, location } = req.params;
+  let { productName, location } = req.params;
+  const { userId } = req.query; // or req.body, depending on how you send it
+
+  // 🔄 Fallback: If location is null, fetch from user profile
+  if (!location || location === "null" || location === "undefined") {
+    if (!userId) {
+      return res.status(400).json({ success: false, message: "Location is null and userId not provided." });
+    }
+
+    const user = await userModel.findById(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found to derive location." });
+    }
+
+    console.log(user,'location');
+    location = user.locality || ""; // Prioritize available fields
+  }
 
   const validProductName = productName && productName !== "null" && productName !== "undefined";
-  const validLocation = location && location !== "null" && location !== "undefined";
+  const validLocation = location && location.trim() !== "";
 
   if (!validProductName && !validLocation) {
-    return res.status(StatusCodes.BAD_REQUEST).json({
+    return res.status(400).json({
       success: false,
       message: "Please provide at least one search term in the params: productName or location.",
     });
@@ -403,17 +508,13 @@ const searchProducts = async (req, res) => {
     // 🔍 If both productName and location are provided
     if (validProductName && validLocation) {
       const shopRegex = new RegExp(location, "i");
-
       const matchingShops = await shopModel.find({
-        isBanned: false, // ✅ Only include non-banned shops
+        isBanned: false,
         $or: [{ locality: { $regex: shopRegex } }, { place: { $regex: shopRegex } }],
       }, "_id");
 
       if (matchingShops.length === 0) {
-        return res.status(StatusCodes.NOT_FOUND).json({
-          success: false,
-          message: "No shops found for the given location.",
-        });
+        return res.status(404).json({ success: false, message: "No shops found for the given location." });
       }
 
       const shopIds = matchingShops.map(shop => shop._id);
@@ -424,7 +525,7 @@ const searchProducts = async (req, res) => {
         shop: { $in: shopIds },
       });
 
-      return res.status(StatusCodes.OK).json({ success: true, data: products });
+      return res.status(200).json({ success: true, data: products });
     }
 
     // 🔍 If only productName is provided
@@ -434,40 +535,31 @@ const searchProducts = async (req, res) => {
       const all = await productModel.find({ name: { $regex: nameRegex } })
         .populate("shop", "isBanned");
 
-      // ✅ Filter products from non-banned shops only
       products = all.filter(p => p.shop && !p.shop.isBanned);
-
-      return res.status(StatusCodes.OK).json({ success: true, data: products });
+      return res.status(200).json({ success: true, data: products });
     }
 
     // 🔍 If only location is provided
     if (validLocation) {
       const shopRegex = new RegExp(location, "i");
-
       const matchingShops = await shopModel.find({
-        isBanned: false, // ✅ Only include non-banned shops
+        isBanned: false,
         $or: [{ locality: { $regex: shopRegex } }, { place: { $regex: shopRegex } }],
       }, "_id");
 
       if (matchingShops.length === 0) {
-        return res.status(StatusCodes.NOT_FOUND).json({
-          success: false,
-          message: "No shops found for the given location.",
-        });
+        return res.status(404).json({ success: false, message: "No shops found for the given location." });
       }
 
       const shopIds = matchingShops.map(shop => shop._id);
       products = await productModel.find({ shop: { $in: shopIds } });
 
-      return res.status(StatusCodes.OK).json({ success: true, data: products });
+      return res.status(200).json({ success: true, data: products });
     }
 
   } catch (err) {
     console.error(`Search error - ${err.message}`);
-    return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
-      success: false,
-      message: "Server error",
-    });
+    return res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
