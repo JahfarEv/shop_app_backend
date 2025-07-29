@@ -131,6 +131,15 @@ const CommissionSettings = require("../models/salesmanCommisionSettings")
 
 const createShop = async (req, res) => {
   try {
+
+     const cleanBody = {};
+    for (let key in req.body) {
+      const cleanKey = key.trim();
+      cleanBody[cleanKey] = req.body[key];
+    }
+
+    console.log("📥 Cleaned Request Body:", cleanBody);
+
     const {
       shopName,
       category,
@@ -144,7 +153,7 @@ const createShop = async (req, res) => {
       mobileNumber,
       landlineNumber,
       agentCode,
-    } = req.body;
+    } = cleanBody;
 
     let imageUrl = null;
     if (req.file) {
@@ -181,19 +190,22 @@ const createShop = async (req, res) => {
 
     await newShop.save();
 
-    // ✅ Link shop to Salesman and apply commission
-    if (matchedSalesman) {
-      matchedSalesman.shopsAddedBySalesman.push(newShop._id);
+  if (matchedSalesman) {
+  matchedSalesman.shopsAddedBySalesman.push(newShop._id);
 
-      // ✅ Fetch current commission amount from settings
-      const settings = await CommissionSettings.findOne();
-      const commission = settings?.salesmanCommission || 0;
+  // ✅ Fetch current commission amount from settings
+  const settings = await CommissionSettings.findOne();
+  const commission = settings?.salesCommission || 0;
 
-      // ✅ Update commission earned
-      matchedSalesman.salesCommissionEarned = (matchedSalesman.salesCommissionEarned || 0) + commission;
+  // ✅ Push new entry into salesCommissionEarned
+  matchedSalesman.salesCommissionEarned.push({
+    shop: newShop._id,
+    amount: commission,
+  });
 
-      await matchedSalesman.save();
-    }
+  await matchedSalesman.save();
+}
+
 
     // 🔔 Send FCM Notification
     const users = await userModel.find({ fcmTokens: { $exists: true, $ne: [] } });

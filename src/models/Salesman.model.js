@@ -21,11 +21,13 @@ pancardNumber: { type: String },
   agentCode: [{ type: String, unique: true }],
 
   // Shops added using this salesman's agent codes
-  shopsAddedBySalesman: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Shop' }],
-  salesCommissionEarned: {
-    type: Number,
-    default: 0
-  },
+  // shopsAddedBySalesman: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Shop' }],
+   salesCommissionEarned: [
+    {
+      shop: { type: mongoose.Schema.Types.ObjectId, ref: 'Shop' },
+      amount: { type: Number, required: true }
+    }
+  ],
 
   // Admin approval required before login
   isApproved: { type: Boolean, default: false }

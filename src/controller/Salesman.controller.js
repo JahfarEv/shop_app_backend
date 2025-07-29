@@ -2,6 +2,7 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require("bcrypt");
 const MarketingManager = require('../models/MarketingManager.model');
 const Salesman = require('../models/Salesman.model');
+const Shop = require('../models/storeModel');
 
 // =============================================================================================
 // 📥 Register Salesman
@@ -181,26 +182,71 @@ const loginSalesman = async (req, res) => {
   }
 };
 
-const getSalesmanById = async (req, res) => {
+// const getSalesmanById = async (req, res) => {
 
+//   const { id } = req.params;
+
+//   try {
+//     // 🔍 Find salesman by ID and populate manager and shops
+//     const salesman = await Salesman.findById(id)
+//       .populate('manager', 'name mobileNumber email') // Populate manager details
+//       .populate('shopsAddedBySalesman', 'name location'); // Optional
+
+//     if (!salesman) {
+//       return res.status(404).json({ message: 'Salesman not found' });
+//     }
+
+//     const salesmanData = salesman.toObject();
+//     delete salesmanData.password; // 🔐 Hide sensitive info
+
+//     res.status(200).json({
+//       message: 'Salesman details fetched successfully',
+//       salesman: salesmanData
+//     });
+
+//   } catch (err) {
+//     res.status(400).json({
+//       message: 'Invalid salesman ID or server error',
+//       error: err.message
+//     });
+//   }
+// };
+
+
+
+
+const getSalesmanById = async (req, res) => {
   const { id } = req.params;
 
   try {
-    // 🔍 Find salesman by ID and populate manager and shops
     const salesman = await Salesman.findById(id)
-      .populate('manager', 'name mobileNumber email') // Populate manager details
-      .populate('shopsAddedBySalesman', 'name location'); // Optional
+      .populate('manager', 'name mobileNumber email')
+      .populate({
+        path: 'salesCommissionEarned.shop',
+        select: 'shopName place locality'
+      });
 
     if (!salesman) {
       return res.status(404).json({ message: 'Salesman not found' });
     }
 
     const salesmanData = salesman.toObject();
-    delete salesmanData.password; // 🔐 Hide sensitive info
+
+    // 🔐 Remove sensitive data
+    delete salesmanData.password;
+
+    // 💰 Calculate total commission earned
+    const totalCommission = (salesman.salesCommissionEarned || []).reduce(
+      (acc, entry) => acc + (entry.amount || 0),
+      0
+    );
 
     res.status(200).json({
       message: 'Salesman details fetched successfully',
-      salesman: salesmanData
+      salesman: {
+        ...salesmanData,
+        totalCommissionEarned: totalCommission
+      }
     });
 
   } catch (err) {
@@ -210,7 +256,6 @@ const getSalesmanById = async (req, res) => {
     });
   }
 };
-
 
 module.exports = {
   registerSalesman,
