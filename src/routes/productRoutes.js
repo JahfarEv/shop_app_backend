@@ -15,7 +15,7 @@ const {
 } = require("../controller/product.controller");
 const { verifyToken } = require("../middleware/verifyToken");
 
-router.post("/", upload.single("productImage"), handleCreateProduct);
+router.post("/:shopId", upload.single("productImage"), handleCreateProduct);
 router.get("/getall", handleGetAllProducts);
 router.get("/getone/:id", handleGetProductById);
 router.get("/user/:userId", getProductsByUserId);

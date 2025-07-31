@@ -18,11 +18,15 @@ const userModel = require("../models/user");
 // =================================================================================================
 const handleCreateProduct = async (req, res) => {
   // ===================================== 🔍 INPUT VALIDATION =====================================
-  const { adminId, userId } = req.body;
+  const {  userId } = req.body;
+    const { shopId } = req.params;
+console.log(shopId,'idddddd');
 
-  if (!adminId && !userId) {
-    return res.status(400).json({ message: "Either adminId or userId is required" });
+
+if (!shopId) {
+    return res.status(400).json({ message: "shopId is required in params" });
   }
+
 
   try {
     // ===================================== 📂 FILE LOGGING ========================================
@@ -31,7 +35,7 @@ const handleCreateProduct = async (req, res) => {
     // ===================================== 🛠️ PRODUCT DATA PREP ==================================
     const productData = {
       ...req.body,
-      adminId: adminId || undefined,
+      shop: shopId || undefined,
       userId: userId || undefined,
     };
 
