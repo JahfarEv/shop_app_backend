@@ -16,27 +16,131 @@ const userModel = require("../models/user");
 // =================================================================================================
 // ====================================== 🟢 CREATE PRODUCT =========================================
 // =================================================================================================
+// const handleCreateProduct = async (req, res) => {
+//   // ===================================== 🔍 INPUT VALIDATION =====================================
+//   const {  userId } = req.body;
+//     const { shopId } = req.params;
+// console.log(shopId,'idddddd');
+
+
+// if (!shopId) {
+//     return res.status(400).json({ message: "shopId is required in params" });
+//   }
+
+
+//   try {
+//     // ===================================== 📂 FILE LOGGING ========================================
+//     console.log(`File received for product: ${req.file?.originalname || "no file"}`);
+
+//     // ===================================== 🛠️ PRODUCT DATA PREP ==================================
+//     const productData = {
+//       ...req.body,
+//       shop: shopId || undefined,
+//       userId: userId || undefined,
+//     };
+
+//     // ===================================== 📦 CREATE PRODUCT ======================================
+//     const newProduct = await productService.createProduct(productData, req.file);
+//     console.log(`Product created successfully - ID: ${newProduct._id}, Name: ${newProduct.name}`);
+
+//     // ===================================== 📝 LOG BODY FIELDS =====================================
+//     info(`Request body fields: [${Object.keys(req.body).join(", ")}]`);
+
+//     // ===================================== 📱 GET FCM USERS =======================================
+//     const users = await User.find({ fcmTokens: { $exists: true, $ne: [] } });
+//     const allTokens = users.flatMap(user => user.fcmTokens);
+
+//     // ===================================== 🔔 SEND FCM NOTIFICATION ================================
+//     let fcmSummary = {};
+//     if (allTokens.length > 0) {
+//       const message = {
+//         notification: {
+//           title: "🆕 New Product Added!",
+//           body: `Introducing "${newProduct.name}". Check it out now!`,
+//         },
+//         tokens: allTokens,
+//       };
+
+//       const response = await admin.messaging().sendEachForMulticast(message);
+//       fcmSummary = {
+//         totalSent: allTokens.length,
+//         successCount: response.successCount,
+//         failureCount: response.failureCount,
+//       };
+
+//       // info("✅ FCM Notification Summary:");
+//       // info(`Total Sent: ${fcmSummary.totalSent}`);
+//       // info(`Success Count: ${fcmSummary.successCount}`);
+//       // info(`Failure Count: ${fcmSummary.failureCount}`);
+//     } else {
+//       info("No FCM tokens found. Notification not sent.");
+//     }
+
+//     // ===================================== 💾 SAVE NOTIFICATION TO DB ==============================
+//     const notificationDoc = new Notification({
+//       title: "🆕 New Product Added!",
+//       body: `Introducing "${newProduct.name}". Check it out now!`,
+//       type: "new_product",
+//       recipients: users.map((user) => ({
+//         userId: user._id,
+//         isRead: false,
+//       })),
+//       data: {
+//         productId: newProduct._id,
+//         productName: newProduct.name,
+//       },
+//     });
+
+//     await notificationDoc.save();
+
+//     // ===================================== ✅ SEND FINAL RESPONSE ==================================
+//     res.status(201).json({
+//       message: "Product created",
+//       product: newProduct,
+//       notification: fcmSummary,
+//     });
+
+//   } catch ({ statusCode = 500, message }) {
+//     // ===================================== ❌ ERROR HANDLING ======================================
+//     error(`Product creation failed - Error: ${message}`);
+//     res.status(statusCode).json({ message });
+//   }
+// };
+
+
+
+
 const handleCreateProduct = async (req, res) => {
   // ===================================== 🔍 INPUT VALIDATION =====================================
-  const {  userId } = req.body;
-    const { shopId } = req.params;
-console.log(shopId,'idddddd');
+  const { userId } = req.body;
+  const { shopId } = req.params;
+  console.log(shopId, 'idddddd');
 
-
-if (!shopId) {
+  if (!shopId) {
     return res.status(400).json({ message: "shopId is required in params" });
   }
 
-
   try {
+    // ===================================== 🏪 FETCH SHOP CATEGORY =================================
+    const shop = await Shop.findById(shopId);
+    if (!shop) {
+      return res.status(404).json({ message: "Shop not found" });
+    }
+
+    const shopCategory = shop.category;
+    if (!shopCategory) {
+      return res.status(400).json({ message: "Shop category not found" });
+    }
+
     // ===================================== 📂 FILE LOGGING ========================================
     console.log(`File received for product: ${req.file?.originalname || "no file"}`);
 
     // ===================================== 🛠️ PRODUCT DATA PREP ==================================
     const productData = {
       ...req.body,
-      shop: shopId || undefined,
+      shop: shopId,
       userId: userId || undefined,
+  category: shop.category?.toString() || undefined, // 🛠 Fixes the string error
     };
 
     // ===================================== 📦 CREATE PRODUCT ======================================
@@ -67,11 +171,6 @@ if (!shopId) {
         successCount: response.successCount,
         failureCount: response.failureCount,
       };
-
-      // info("✅ FCM Notification Summary:");
-      // info(`Total Sent: ${fcmSummary.totalSent}`);
-      // info(`Success Count: ${fcmSummary.successCount}`);
-      // info(`Failure Count: ${fcmSummary.failureCount}`);
     } else {
       info("No FCM tokens found. Notification not sent.");
     }
@@ -106,6 +205,7 @@ if (!shopId) {
     res.status(statusCode).json({ message });
   }
 };
+
 
 // this is for admin pannel only - cz here we send the banned shop products too but in user module we dont want to send the banned shop products
 const AdminGetAllProducts = async (req, res) => {
