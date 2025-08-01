@@ -12,8 +12,10 @@ const {setSalesmanCommission} = require("../controller/adminAuth.controller");
 const {setManagerCommission} = require("../controller/adminAuth.controller");
 const {getSalesmanCommission} = require("../controller/adminAuth.controller");
 const {getManagerCommission} = require("../controller/adminAuth.controller");
+const {handleCreateAdvertisement} = require("../controller/adminAuth.controller");
+const {handleGetAdvertisements} = require("../controller/adminAuth.controller");
 
-
+const upload = require("../middleware/multer");
 
 // users api route of admin pannel -
 
@@ -66,6 +68,8 @@ router.put('/commission/salesman', setSalesmanCommission);
 router.put('/commission/manager', setManagerCommission);
 router.get('/get-commission/salesman',getSalesmanCommission);
 router.get('/get-commission/manager', getManagerCommission)
+router.post('/advertisement', upload.single("image"), handleCreateAdvertisement)
+router.get('/advertisement',handleGetAdvertisements )
 
 
 

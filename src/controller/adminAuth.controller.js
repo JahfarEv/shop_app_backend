@@ -6,6 +6,8 @@ const Salesman = require("../models/Salesman.model");
 const MarketingManager = require("../models/MarketingManager.model");
 const SalesmanCommissionSettings = require("../models/salesmanCommisionSettings");
 const ManagerCommisionSettings = require("../models/managerCommisionSettings")
+const Advertisement = require("../models/Advertisement");
+
 
 const handleAdminRegister = async (req, res) => {
   try {
@@ -305,6 +307,46 @@ const getManagerCommission = async (req, res) => {
   }
 };
 
+
+const handleCreateAdvertisement = async (req, res) => {
+    try {
+      const { title } = req.body;
+
+      if (!title) {
+        return res.status(400).json({ error: "Title is required" });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({ error: "Image file is required" });
+      }
+
+      const newAd = new Advertisement({
+        title,
+        image: req.file.originalname, // using the filename stored by your multer
+      });
+
+      await newAd.save();
+
+      res.status(201).json({ message: "Advertisement created successfully", ad: newAd });
+    } catch (err) {
+      console.error("Advertisement creation failed:", err.message);
+      res.status(500).json({ error: err.message });
+    }
+  }
+
+
+// Get All Advertisements
+const handleGetAdvertisements = async (req, res) => {
+  try {
+    const ads = await Advertisement.find();
+    res.status(200).json(ads);
+  } catch (err) {
+    console.error("Fetching advertisements failed:", err.message);
+    res.status(500).json({ error: "Failed to fetch advertisements" });
+  }
+};
+
+
 module.exports = {
   handleAdminRegister,
   handleAdminLogin,
@@ -314,5 +356,7 @@ module.exports = {
   setSalesmanCommission,
   setManagerCommission,
   getSalesmanCommission,
-  getManagerCommission
+  getManagerCommission,
+  handleCreateAdvertisement ,
+  handleGetAdvertisements
 };
