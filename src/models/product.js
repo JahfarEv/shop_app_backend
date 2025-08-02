@@ -5,22 +5,22 @@ const productSchema = mongoose.Schema(
     shop: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Shop",
-      // required: true,
+      required: true,
     },
     name: {
       type: String,
-      // required: true,
+      required: true,
     },
     description: {
       type: String,
     },
     price: {
       type: Number,
-      // required: true,
+      required: true,
     },
     quantity: {
       type: Number,
-      // required: true,
+      required: true,
     },
     productImage: {
       type: String,
@@ -33,14 +33,14 @@ const productSchema = mongoose.Schema(
     estimatedTime: {
       type: String,
     },
-    productType: {
+    unitType: {
       type: String,
-      // enum: ["kg", "litre", "gram", "piece", "pack", "dozen"],
-      // required: true,
+    enum: ['unit', 'kg', 'liter'], // defining selling type
+      required: true,
     },
     deliveryOption: {
       type: String,
-      // enum: ["Home Delivery", "Store Pickup"],
+      enum: ["Home Delivery", "Store Pickup"],
       // required: true,
     },
     adminId: { type: String, required: false }, // Ensure it's a string
@@ -52,7 +52,7 @@ const productSchema = mongoose.Schema(
     },
     category: {
       type: String,
-      // required: true,
+      required: true,
     }
 
   },

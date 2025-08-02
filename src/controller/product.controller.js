@@ -126,6 +126,7 @@ const handleCreateProduct = async (req, res) => {
     if (!shop) {
       return res.status(404).json({ message: "Shop not found" });
     }
+    
 
     const shopCategory = shop.category;
     if (!shopCategory) {
