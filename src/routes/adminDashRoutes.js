@@ -14,6 +14,7 @@ const {getSalesmanCommission} = require("../controller/adminAuth.controller");
 const {getManagerCommission} = require("../controller/adminAuth.controller");
 const {handleCreateAdvertisement} = require("../controller/adminAuth.controller");
 const {handleGetAdvertisements} = require("../controller/adminAuth.controller");
+const {unapprovedSalesmen} = require("../controller/adminAuth.controller")
 
 const upload = require("../middleware/multer");
 
@@ -70,6 +71,7 @@ router.get('/get-commission/salesman',getSalesmanCommission);
 router.get('/get-commission/manager', getManagerCommission)
 router.post('/advertisement', upload.single("image"), handleCreateAdvertisement)
 router.get('/advertisement',handleGetAdvertisements )
+router.get('/get-salesman', unapprovedSalesmen)
 
 
 

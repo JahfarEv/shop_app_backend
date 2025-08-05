@@ -139,6 +139,26 @@ const assignAgentCodeToSalesman = async (req, res) => {
 };
 
 // =============================================================================================
+// ✅ Get salesman without Approve
+// =============================================================================================
+
+const unapprovedSalesmen = async(req,res)=>{
+  try {
+    const unapprovedSalesmen = await Salesman.find({ isApproved: false });
+    res.status(200).json({
+      message: 'Unapproved salesmen fetched successfully',
+      data: unapprovedSalesmen
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: 'Error fetching unapproved salesmen',
+      error: error.message
+    });
+  }
+}
+
+
+// =============================================================================================
 // ✅ Approve Marketing Manager
 // =============================================================================================
 const approveManager = async (req, res) => {
@@ -358,5 +378,6 @@ module.exports = {
   getSalesmanCommission,
   getManagerCommission,
   handleCreateAdvertisement ,
-  handleGetAdvertisements
+  handleGetAdvertisements,
+  unapprovedSalesmen,
 };
