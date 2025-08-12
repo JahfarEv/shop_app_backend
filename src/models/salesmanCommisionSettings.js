@@ -8,6 +8,8 @@ const commissionSchema = new mongoose.Schema({
 
   salesTarget: { type: Number, default: 0 },
   subscriptionCommission: { type: Number, default: 0 },
+    salesmanGeneratedSalesCommissionForManager: { type: Number, default: 0 },
+
   updatedAt: {
     type: Date,
     default: Date.now,
