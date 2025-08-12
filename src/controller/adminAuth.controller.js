@@ -358,7 +358,7 @@ const getManagerCommission = async (req, res) => {
       settings: {
         managerCommission: settings.salesCommission,
         salesTarget: settings.salesTarget,
-        salesmanSalesCommissionForManager: settings.salesmanGeneratedSalesCommissionForManager,
+        salesmanSalesCommissionForManager: settings.salesmanSalesCommissionForManager,
 
         subscriptionCommission: settings.subscriptionCommission,
 
