@@ -11,14 +11,89 @@ const Notification = require("../models/notificationModel"); // ✅ Notification
 // =================================================================================================
 // ============================= 🟢 CREATE SUBSCRIPTION PLAN & NOTIFY USERS ==========================
 // =================================================================================================
+// async function createPlan(req, res) {
+//   try {
+//     const { name, durationDays, amount, description } = req.body;
+
+//     // ===================================== 💾 SAVE PLAN TO DATABASE ================================
+//     const plan = await SubscriptionPlan.create({
+//       name: name.trim(),
+//       durationDays,
+//       amount,
+//       description: (description || "").trim(),
+//     });
+
+//     // ===================================== 📱 GET USERS WITH FCM TOKENS =============================
+//     const users = await userModel.find({ fcmTokens: { $exists: true, $ne: [] } });
+
+//     // ===================================== 📡 EXTRACT ALL TOKENS =====================================
+//     const allTokens = users.flatMap(user => user.fcmTokens);
+
+//     // ===================================== 🔔 SEND FCM NOTIFICATION IF TOKENS FOUND ==================
+//     if (allTokens.length > 0) {
+//       const message = {
+//         notification: {
+//           title: "New Subscription Plan Available",
+//           body: `Check out our new plan: ${plan.name} for ₹${plan.amount}\n\nPlan Details: ${plan.description}`,
+//         },
+//         tokens: allTokens,
+//       };
+
+//       const response = await admin.messaging().sendEachForMulticast(message);
+
+//       // console.log("✅ FCM Notification Summary:");
+//       // console.log("Total Sent:", allTokens.length);
+//       // console.log("Success Count:", response.successCount);
+//       // console.log("Failure Count:", response.failureCount);
+
+//       response.responses.forEach((resp, index) => {
+//         if (!resp.success) {
+//           console.log(`❌ Failed to send to token[${index}]: ${resp.error.message}`);
+//         }
+//       });
+//     } else {
+//       console.log("ℹ️ No FCM tokens found, notification not sent.");
+//     }
+
+//     // ===================================== 🗂️ SAVE NOTIFICATION TO DATABASE ==========================
+//     const notificationDoc = new Notification({
+//       title: "New Subscription Plan Available",
+//       body: `Check out our new plan: ${plan.name} for ₹${plan.amount}`,
+//       type: "new_plan",
+//       recipients: users.map(user => ({
+//         userId: user._id,
+//         isRead: false,
+//       })),
+//       data: {
+//         planId: plan._id,
+//         planName: plan.name,
+//         amount: plan.amount,
+//       },
+//     });
+
+//     await notificationDoc.save();
+
+//     // ===================================== ✅ SEND SUCCESS RESPONSE ==================================
+//     return res.status(201).json({ success: true, plan });
+
+//   } catch (err) {
+//     // ===================================== ❌ ERROR HANDLING ========================================
+//     console.error(" Error in createPlan:", err);
+//     return res.status(500).json({ success: false, message: err.message });
+//   }
+// }
+
+
+
 async function createPlan(req, res) {
   try {
-    const { name, durationDays, amount, description } = req.body;
+    const { name, durationType, durationValue, amount, description } = req.body;
 
     // ===================================== 💾 SAVE PLAN TO DATABASE ================================
     const plan = await SubscriptionPlan.create({
       name: name.trim(),
-      durationDays,
+      durationType,       // ✅ monthly | yearly
+      durationValue,      // ✅ how many months/years
       amount,
       description: (description || "").trim(),
     });
@@ -34,17 +109,12 @@ async function createPlan(req, res) {
       const message = {
         notification: {
           title: "New Subscription Plan Available",
-          body: `Check out our new plan: ${plan.name} for ₹${plan.amount}\n\nPlan Details: ${plan.description}`,
+          body: `Check out our new ${plan.durationType} plan: ${plan.name} for ₹${plan.amount}\n\nPlan Details: ${plan.description}`,
         },
         tokens: allTokens,
       };
 
       const response = await admin.messaging().sendEachForMulticast(message);
-
-      // console.log("✅ FCM Notification Summary:");
-      // console.log("Total Sent:", allTokens.length);
-      // console.log("Success Count:", response.successCount);
-      // console.log("Failure Count:", response.failureCount);
 
       response.responses.forEach((resp, index) => {
         if (!resp.success) {
@@ -58,7 +128,7 @@ async function createPlan(req, res) {
     // ===================================== 🗂️ SAVE NOTIFICATION TO DATABASE ==========================
     const notificationDoc = new Notification({
       title: "New Subscription Plan Available",
-      body: `Check out our new plan: ${plan.name} for ₹${plan.amount}`,
+      body: `Check out our new ${plan.durationType} plan: ${plan.name} for ₹${plan.amount}`,
       type: "new_plan",
       recipients: users.map(user => ({
         userId: user._id,

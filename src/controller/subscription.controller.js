@@ -5,30 +5,296 @@ const Subscription = require("../models/subscription");
 const Notification = require("../models/notificationModel"); // ✅ Import Notification model
 const { info, error, debug } = require("../middleware/logger");
 const admin = require("../config/admin");
+const SubscriptionPlan = require("../models/SubscriptionPlan");
 
 // =================================================================================================
 // ============================== 🟢 HANDLE START OR EXTEND SUBSCRIPTION ============================
 // =================================================================================================
 // remember if same user buy the same plan again it will add up days and amount in the previous plan he bought first it will not show it as different different seperate subscription of that same user  
-async function handleStartSubscription(req, res) {
-  const durationDays = Number(req.body.durationDays);
-  const amount = Number(req.body.amount);
-  const userId = req.user.id;
-  const subscriptionPlanId = req.body.subscriptionPlanId;
+// async function handleStartSubscription(req, res) {
+//   const durationDays = Number(req.body.durationDays);
+//   const amount = Number(req.body.amount);
+//   const userId = req.user.id;
+//   const subscriptionPlanId = req.body.subscriptionPlanId;
 
-  if (isNaN(durationDays) || isNaN(amount)) {
-    return res.status(400).json({
-      success: false,
-      message: "durationDays and amount must be valid numbers",
-    });
-  }
+//   if (isNaN(durationDays) || isNaN(amount)) {
+//     return res.status(400).json({
+//       success: false,
+//       message: "durationDays and amount must be valid numbers",
+//     });
+//   }
+
+//   const now = moment().tz("Asia/Kolkata").toDate();
+
+//   try {
+//     // ===================================== 🔄 CHECK FOR ACTIVE SUBSCRIPTION =========================
+//     let existingSubscription = await Subscription.findOne({
+//       userId,
+//       status: "active",
+//     });
+
+//     let responseMessage = "";
+//     let subscription;
+
+//     if (existingSubscription) {
+//       // ===================================== ⏫ EXTEND SUBSCRIPTION ================================
+//       const newEndDate = moment(existingSubscription.endDate)
+//         .add(durationDays, "days")
+//         .toDate();
+//       existingSubscription.endDate = newEndDate;
+//       existingSubscription.amount += amount;
+//       existingSubscription.durationDays += durationDays; // ✅ update durationDays
+//       await existingSubscription.save();
+
+//       responseMessage = "Subscription extended";
+//       subscription = existingSubscription;
+//     } else {
+//       // ===================================== 🆕 CREATE NEW SUBSCRIPTION =============================
+//       const startDate = now;
+//       const endDate = moment(now).add(durationDays, "days").toDate();
+
+//       const newSubscription = await Subscription.create({
+//         userId,
+//         subscriptionPlanId,   // added subscription plan id now we can access the subscription plan details too 
+//         durationDays,
+//         amount,
+//         startDate,
+//         endDate,
+//         status: "active",
+//         paymentStatus: "paid",
+//       });
+
+//       await User.findByIdAndUpdate(userId, {
+//         subscriptionId: newSubscription._id,
+//       });
+
+//       responseMessage = "Subscription activated";
+//       subscription = newSubscription;
+//     }
+
+//     // ===================================== 🔔 SEND FCM TO THAT USER ONLY =============================
+//     const user = await User.findById(userId);
+//     const tokens = user?.fcmTokens || [];
+
+//     if (tokens.length > 0) {
+//       const message = {
+//         notification: {
+//           title: "✅ Subscription Active!",
+//           body: `Your subscription is now active for ${durationDays} days.`,
+//         },
+//         tokens,
+//       };
+
+//       const fcmResponse = await admin.messaging().sendEachForMulticast(message);
+//       // console.log("✅ FCM Notification Summary:");
+//       // console.log("Total Sent:", tokens.length);
+//       // console.log("Success Count:", fcmResponse.successCount);
+//       // console.log("Failure Count:", fcmResponse.failureCount);
+//     } else {
+//       console.log("No FCM tokens found for this user. Notification not sent.");
+//     }
+
+//     // ===================================== 🗂️ SAVE NOTIFICATION TO DB FOR THIS USER ONLY =============
+//     const notificationDoc = new Notification({
+//       title: "✅ Subscription Active!",
+//       body: `Your subscription is now active for ${durationDays} days.`,
+//       type: "subscription_activated",
+//       recipients: [{
+//         userId: user._id,     // will only saves the user id of user who buys the subscription in each start-subscription document in db
+//         isRead: false,        // unlike other controller - "create shop controller" where we will save all the user id and it own isread field in one notification document and will get update
+//       }],
+//       data: {
+//         subscriptionId: subscription._id,
+//         durationDays,
+//         amount,
+//       },
+//     });
+
+//     await notificationDoc.save();
+
+//     // ===================================== ✅ SEND SUCCESS RESPONSE ================================
+//     return res.status(200).json({
+//       success: true,
+//       message: responseMessage,
+//       subscription,
+//     });
+
+//   } catch (err) {
+//     // ===================================== ❌ ERROR HANDLING ========================================
+//     console.error("Failed to start subscription:", err.message);
+//     return res.status(500).json({
+//       success: false,
+//       message: "Internal Server Error",
+//     });
+//   }
+// }
+
+
+
+// async function handleStartSubscription(req, res) {
+//   const durationDays = Number(req.body.durationDays);
+//   const amount = Number(req.body.amount);
+//   const userId = req.user.id;
+//   const subscriptionPlanId = req.body.subscriptionPlanId;
+
+//   if (isNaN(durationDays) || isNaN(amount)) {
+//     return res.status(400).json({
+//       success: false,
+//       message: "durationDays and amount must be valid numbers",
+//     });
+//   }
+
+//   const now = moment().tz("Asia/Kolkata").toDate();
+
+//   try {
+//     // ===================================== 🔄 CHECK FOR ACTIVE SUBSCRIPTION =========================
+//     let existingSubscription = await Subscription.findOne({
+//       userId,
+//       status: "active",
+//     });
+
+//     let responseMessage = "";
+//     let subscription;
+
+//     if (existingSubscription) {
+//       // ===================================== ⏫ EXTEND SUBSCRIPTION ================================
+//       const newEndDate = moment(existingSubscription.endDate)
+//         .add(durationDays, "days")
+//         .toDate();
+
+//       existingSubscription.endDate = newEndDate;
+//       existingSubscription.amount += amount;
+//       existingSubscription.durationDays += durationDays; // ✅ update durationDays
+//       await existingSubscription.save();
+
+//       responseMessage = "Subscription extended";
+//       subscription = existingSubscription;
+//     } else {
+//       // ===================================== 🆕 CREATE NEW SUBSCRIPTION =============================
+//       const startDate = now;
+//       let totalDurationDays = durationDays;
+
+//       // 👉 Check if this is the user's first subscription (no history at all)
+//       const previousSubscription = await Subscription.findOne({ userId });
+
+//       if (!previousSubscription) {
+//         // First-time subscription → add 60 days free
+//         totalDurationDays += 60;
+//         console.log("🎉 First subscription! Added 2 months free.");
+//       }
+
+//       const endDate = moment(now).add(totalDurationDays, "days").toDate();
+
+//       const newSubscription = await Subscription.create({
+//         userId,
+//         subscriptionPlanId, // added subscription plan id now we can access the subscription plan details too
+//         durationDays: totalDurationDays,
+//         amount,
+//         startDate,
+//         endDate,
+//         status: "active",
+//         paymentStatus: "paid",
+//       });
+
+//       await User.findByIdAndUpdate(userId, {
+//         subscriptionId: newSubscription._id,
+//       });
+
+//       responseMessage = previousSubscription
+//         ? "Subscription activated"
+//         : "Subscription activated with 2 months free!";
+
+//       subscription = newSubscription;
+//     }
+
+//     // ===================================== 🔔 SEND FCM TO THAT USER ONLY =============================
+//     const user = await User.findById(userId);
+//     const tokens = user?.fcmTokens || [];
+
+//     if (tokens.length > 0) {
+//       const message = {
+//         notification: {
+//           title: "✅ Subscription Active!",
+//           body: responseMessage, // 👈 send correct message (with free info if first time)
+//         },
+//         tokens,
+//       };
+
+//       const fcmResponse = await admin.messaging().sendEachForMulticast(message);
+//       // console.log("✅ FCM Notification Summary:");
+//       // console.log("Total Sent:", tokens.length);
+//       // console.log("Success Count:", fcmResponse.successCount);
+//       // console.log("Failure Count:", fcmResponse.failureCount);
+//     } else {
+//       console.log("No FCM tokens found for this user. Notification not sent.");
+//     }
+
+//     // ===================================== 🗂️ SAVE NOTIFICATION TO DB FOR THIS USER ONLY =============
+//     const notificationDoc = new Notification({
+//       title: "✅ Subscription Active!",
+//       body: responseMessage, // 👈 updated to show free months if first time
+//       type: "subscription_activated",
+//       recipients: [
+//         {
+//           userId: user._id, // only save that one user
+//           isRead: false,
+//         },
+//       ],
+//       data: {
+//         subscriptionId: subscription._id,
+//         durationDays: subscription.durationDays,
+//         amount: subscription.amount,
+//       },
+//     });
+
+//     await notificationDoc.save();
+
+//     // ===================================== ✅ SEND SUCCESS RESPONSE ================================
+//     return res.status(200).json({
+//       success: true,
+//       message: responseMessage,
+//       subscription,
+//     });
+//   } catch (err) {
+//     // ===================================== ❌ ERROR HANDLING ========================================
+//     console.error("Failed to start subscription:", err.message);
+//     return res.status(500).json({
+//       success: false,
+//       message: "Internal Server Error",
+//     });
+//   }
+// }
+
+
+
+// ==============================
+// Start / Extend Subscription (Shop-based)
+// ==============================
+async function handleStartSubscription(req, res) {
+  const userId = req.user.id;
+  const shopId = req.body.shopId; // ✅ shop-based subscription
+  const subscriptionPlanId = req.body.subscriptionPlanId;
+console.log(subscriptionPlanId,'id');
 
   const now = moment().tz("Asia/Kolkata").toDate();
 
   try {
-    // ===================================== 🔄 CHECK FOR ACTIVE SUBSCRIPTION =========================
+    // ===================================== 📌 FETCH PLAN DETAILS ================================
+    const plan = await SubscriptionPlan.findById(subscriptionPlanId);
+    if (!plan) {
+      return res.status(404).json({
+        success: false,
+        message: "Subscription plan not found",
+      });
+    }
+
+    const durationDays = plan.durationValue;
+    const amount = plan.amount;
+
+    // ===================================== 🔄 CHECK ACTIVE SUBSCRIPTION =========================
     let existingSubscription = await Subscription.findOne({
       userId,
+      shopId,
       status: "active",
     });
 
@@ -40,9 +306,10 @@ async function handleStartSubscription(req, res) {
       const newEndDate = moment(existingSubscription.endDate)
         .add(durationDays, "days")
         .toDate();
+
       existingSubscription.endDate = newEndDate;
       existingSubscription.amount += amount;
-      existingSubscription.durationDays += durationDays; // ✅ update durationDays
+      existingSubscription.durationDays += durationDays;
       await existingSubscription.save();
 
       responseMessage = "Subscription extended";
@@ -50,12 +317,23 @@ async function handleStartSubscription(req, res) {
     } else {
       // ===================================== 🆕 CREATE NEW SUBSCRIPTION =============================
       const startDate = now;
-      const endDate = moment(now).add(durationDays, "days").toDate();
+      let totalDurationDays = durationDays;
+
+      // 👉 Check if this shop has ever had a subscription
+      const previousSubscription = await Subscription.findOne({ userId, shopId });
+
+      if (!previousSubscription) {
+        totalDurationDays += 60; // ✅ first-time shop subscription → add 2 months free
+        console.log("🎉 First subscription for this shop! Added 2 months free.");
+      }
+
+      const endDate = moment(now).add(totalDurationDays, "days").toDate();
 
       const newSubscription = await Subscription.create({
         userId,
-        subscriptionPlanId,   // added subscription plan id now we can access the subscription plan details too 
-        durationDays,
+        shopId,
+        subscriptionPlanId,
+        durationDays: totalDurationDays,
         amount,
         startDate,
         endDate,
@@ -67,11 +345,14 @@ async function handleStartSubscription(req, res) {
         subscriptionId: newSubscription._id,
       });
 
-      responseMessage = "Subscription activated";
+      responseMessage = previousSubscription
+        ? "Subscription activated"
+        : "Subscription activated with 2 months free!";
+
       subscription = newSubscription;
     }
 
-    // ===================================== 🔔 SEND FCM TO THAT USER ONLY =============================
+    // ===================================== 🔔 SEND FCM NOTIFICATION ==============================
     const user = await User.findById(userId);
     const tokens = user?.fcmTokens || [];
 
@@ -79,47 +360,42 @@ async function handleStartSubscription(req, res) {
       const message = {
         notification: {
           title: "✅ Subscription Active!",
-          body: `Your subscription is now active for ${durationDays} days.`,
+          body: responseMessage,
         },
         tokens,
       };
 
-      const fcmResponse = await admin.messaging().sendEachForMulticast(message);
-      // console.log("✅ FCM Notification Summary:");
-      // console.log("Total Sent:", tokens.length);
-      // console.log("Success Count:", fcmResponse.successCount);
-      // console.log("Failure Count:", fcmResponse.failureCount);
-    } else {
-      console.log("No FCM tokens found for this user. Notification not sent.");
+      await admin.messaging().sendEachForMulticast(message);
     }
 
-    // ===================================== 🗂️ SAVE NOTIFICATION TO DB FOR THIS USER ONLY =============
+    // ===================================== 🗂️ SAVE NOTIFICATION TO DB ============================
     const notificationDoc = new Notification({
       title: "✅ Subscription Active!",
-      body: `Your subscription is now active for ${durationDays} days.`,
+      body: responseMessage,
       type: "subscription_activated",
-      recipients: [{
-        userId: user._id,     // will only saves the user id of user who buys the subscription in each start-subscription document in db
-        isRead: false,        // unlike other controller - "create shop controller" where we will save all the user id and it own isread field in one notification document and will get update
-      }],
+      recipients: [
+        {
+          userId: user._id,
+          isRead: false,
+        },
+      ],
       data: {
         subscriptionId: subscription._id,
-        durationDays,
-        amount,
+        shopId: shopId, // ✅ include shopId in notification data
+        durationDays: subscription.durationDays,
+        amount: subscription.amount,
       },
     });
 
     await notificationDoc.save();
 
-    // ===================================== ✅ SEND SUCCESS RESPONSE ================================
+    // ===================================== ✅ RESPONSE ============================================
     return res.status(200).json({
       success: true,
       message: responseMessage,
       subscription,
     });
-
   } catch (err) {
-    // ===================================== ❌ ERROR HANDLING ========================================
     console.error("Failed to start subscription:", err.message);
     return res.status(500).json({
       success: false,

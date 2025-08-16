@@ -34,6 +34,12 @@ const shopSchema = mongoose.Schema(
       ref: "Salesman",
       default: null,
     },
+      subscription: {
+      plan: { type: mongoose.Schema.Types.ObjectId, ref: "SubscriptionPlan" },
+      startDate: { type: Date },
+      endDate: { type: Date },
+      isActive: { type: Boolean, default: false },
+    },
   },
   { timestamps: true }
 );
