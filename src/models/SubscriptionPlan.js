@@ -26,35 +26,30 @@
   // const SubscriptionPlan = mongoose.model("SubscriptionPlan", subscriptionPlanSchema);
   // module.exports = SubscriptionPlan;
 
+const mongoose = require("mongoose");
 
-  const mongoose = require("mongoose");
+const subscriptionPlanSchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: true,
+    trim: true,
+  },
+  durationType: {
+    type: String,
+    enum: ["monthly", "yearly"],
+    required: true,
+  },
+  amount: {
+    type: Number,
+    required: true,
+    min: [0, "amount must be non‐negative"],
+  },
+  description: {
+    type: String,
+    default: "",
+    trim: true,
+  },
+  createdAt: { type: Date, default: Date.now },
+});
 
-  const subscriptionPlanSchema = new mongoose.Schema({
-    name: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    durationType: {
-      type: String,
-      enum: ["monthly", "yearly"],
-      required: true,
-    },
-    durationValue: {
-      type: Number,
-      default: 1, // example: 1 month or 1 year
-    },
-    amount: {
-      type: Number,
-      required: true,
-      min: [0, "amount must be non‐negative"],
-    },
-    description: {
-      type: String,
-      default: "",
-      trim: true,
-    },
-      createdAt: { type: Date, default: Date.now }
-
-  });
 module.exports = mongoose.model("SubscriptionPlan", subscriptionPlanSchema);

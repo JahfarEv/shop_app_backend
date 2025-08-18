@@ -34,7 +34,6 @@ const placeOrderController = async (req, res) => {
   try {
     const { items, addressId, totalCartAmount } = req.body;
     const userId = req.user.id;
-console.log(userId,'user');
 
     // =============================================================================================
     // 🔍 FETCH USER & DELIVERY ADDRESS

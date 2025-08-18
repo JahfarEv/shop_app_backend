@@ -274,9 +274,8 @@ async function handleStartSubscription(req, res) {
   const userId = req.user.id;
   const shopId = req.body.shopId; // ✅ shop-based subscription
   const subscriptionPlanId = req.body.subscriptionPlanId;
-console.log(subscriptionPlanId,'id');
 
-  const now = moment().tz("Asia/Kolkata").toDate();
+  const now = moment().tz("Asia/Kolkata");
 
   try {
     // ===================================== 📌 FETCH PLAN DETAILS ================================
@@ -288,7 +287,6 @@ console.log(subscriptionPlanId,'id');
       });
     }
 
-    const durationDays = plan.durationValue;
     const amount = plan.amount;
 
     // ===================================== 🔄 CHECK ACTIVE SUBSCRIPTION =========================
@@ -303,40 +301,45 @@ console.log(subscriptionPlanId,'id');
 
     if (existingSubscription) {
       // ===================================== ⏫ EXTEND SUBSCRIPTION ================================
-      const newEndDate = moment(existingSubscription.endDate)
-        .add(durationDays, "days")
-        .toDate();
+      let newEndDate = moment(existingSubscription.endDate);
 
-      existingSubscription.endDate = newEndDate;
+      if (plan.durationType === "monthly") {
+        newEndDate = newEndDate.add(1, "month");
+      } else if (plan.durationType === "yearly") {
+        newEndDate = newEndDate.add(1, "year");
+      }
+
+      existingSubscription.endDate = newEndDate.toDate();
       existingSubscription.amount += amount;
-      existingSubscription.durationDays += durationDays;
       await existingSubscription.save();
 
       responseMessage = "Subscription extended";
       subscription = existingSubscription;
     } else {
       // ===================================== 🆕 CREATE NEW SUBSCRIPTION =============================
-      const startDate = now;
-      let totalDurationDays = durationDays;
+      const startDate = now.clone();
 
-      // 👉 Check if this shop has ever had a subscription
-      const previousSubscription = await Subscription.findOne({ userId, shopId });
-
-      if (!previousSubscription) {
-        totalDurationDays += 60; // ✅ first-time shop subscription → add 2 months free
-        console.log("🎉 First subscription for this shop! Added 2 months free.");
+      let endDate;
+      if (plan.durationType === "monthly") {
+        endDate = now.clone().add(1, "month");
+      } else if (plan.durationType === "yearly") {
+        endDate = now.clone().add(1, "year");
       }
 
-      const endDate = moment(now).add(totalDurationDays, "days").toDate();
+      // 👉 First-time shop subscription → Add 2 months free
+      const previousSubscription = await Subscription.findOne({ userId, shopId });
+      if (!previousSubscription) {
+        endDate = endDate.clone().add(2, "months");
+        console.log("🎉 First subscription for this shop! Added 2 months free.");
+      }
 
       const newSubscription = await Subscription.create({
         userId,
         shopId,
         subscriptionPlanId,
-        durationDays: totalDurationDays,
         amount,
-        startDate,
-        endDate,
+        startDate: startDate.toDate(),
+        endDate: endDate.toDate(),
         status: "active",
         paymentStatus: "paid",
       });
@@ -364,7 +367,6 @@ console.log(subscriptionPlanId,'id');
         },
         tokens,
       };
-
       await admin.messaging().sendEachForMulticast(message);
     }
 
@@ -381,9 +383,10 @@ console.log(subscriptionPlanId,'id');
       ],
       data: {
         subscriptionId: subscription._id,
-        shopId: shopId, // ✅ include shopId in notification data
-        durationDays: subscription.durationDays,
+        shopId: shopId,
         amount: subscription.amount,
+        startDate: subscription.startDate,
+        endDate: subscription.endDate,
       },
     });
 
