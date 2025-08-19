@@ -20,6 +20,7 @@ const managerRoutes = require("./managerRoutes.js");
 const salesmanRoutes = require("./salesmanRoutes.js");
 const subscriptionPlanRoutes = require("./subscriptionPlanRoutes");
 const notificaitonRoutes = require("./notificationroutes")
+const paymentRoutes = require("./paymentRoutes.js")
 
 router.use("/auth/user", userAuthRoutes);
 router.use("/auth/admin", adminAuthRoutes);
@@ -40,5 +41,9 @@ router.use('/api/manager', managerRoutes);
 router.use('/api/salesman', salesmanRoutes);
 //shanky
 router.use("/api/user", userRoutes);
+
+//payment
+router.use("/api/payment",paymentRoutes)
+
 
 module.exports = router;
