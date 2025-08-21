@@ -76,10 +76,10 @@ const subscriptionSchema = new mongoose.Schema({
     required: true,
   },
 
-  durationDays: {
-    type: Number,
-    required: true,
-  },
+  // durationDays: {
+  //   type: Number,
+  //   required: true,
+  // },
 
   amount: {
     type: Number,

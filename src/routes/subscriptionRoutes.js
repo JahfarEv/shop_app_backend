@@ -4,12 +4,14 @@ const {
   handleStartSubscription,
   handleCheckSubscriptionStatus,
   handleGetAllSubscriptions,
-  handleSubscriptionByUser
+  handleSubscriptionByUser,
+  verifyPayment
 } = require("../controller/subscription.controller");
 const { verifyToken } = require("../middleware/verifyToken");
 
 //index.js route - /api/subscription
 router.post("/start-subscription", verifyToken, handleStartSubscription);
+router.post("/verify-payment",verifyToken,verifyPayment)
 router.get("/status", verifyToken, handleCheckSubscriptionStatus);
 router.get("/getallsubscription", verifyToken, handleGetAllSubscriptions);
 
