@@ -31,32 +31,103 @@ const getUserNotifications = async (req, res) => {
 // we will use this one instead of using the previous one which is sending the whole recipient name with the all notificaiotion
 // in this it will send all notifications but in the response recipient we will only have that specific user_id from params
 // sends only read = false notification , read = true notifications will not be sent 
+// const getSpecificRecipientandallNotifications = async (req, res) => {
+//   try {
+//     const { userId } = req.params;
+
+//     const notifications = await Notification.find({
+//       recipients: { $elemMatch: { userId, isRead: false } }
+//     }).lean(); // lean = plain JS object
+
+//     const userNotifications = notifications.map((notif) => {
+//       const recipientData = notif.recipients.find(r => r.userId.toString() === userId);
+
+//       return {
+//         _id: notif._id,
+//         title: notif.title,
+//         body: notif.body,
+//         type: notif.type,
+//         data: notif.data,
+//         createdAt: notif.createdAt,
+//         recipient: {
+//           userId: recipientData?.userId,
+//           isRead: recipientData?.isRead || false
+//         }
+//       };
+//     });
+
+//     res.status(200).json(userNotifications);
+//   } catch (err) {
+//     res.status(500).json({
+//       message: "Failed to fetch notifications",
+//       error: err.message
+//     });
+//   }
+// };
+
+
+//test
 const getSpecificRecipientandallNotifications = async (req, res) => {
   try {
     const { userId } = req.params;
 
     const notifications = await Notification.find({
       recipients: { $elemMatch: { userId, isRead: false } }
-    }).lean(); // lean = plain JS object
+    }).lean();
 
-    const userNotifications = notifications.map((notif) => {
+    // 🔹 Transform into grouped order-style format
+    const formattedNotifications = notifications.map((notif) => {
       const recipientData = notif.recipients.find(r => r.userId.toString() === userId);
+
+      // Assume notif.data contains shop, user, items, etc.
+      const { shop, user, selectedAddress, items } = notif.data || {};
+
+      const html = `
+        <h2>🛒 ${notif.title}</h2>
+        <h3>👤 Customer Details</h3>
+        <p><strong>Name:</strong> ${user?.name || "N/A"}</p>
+        <p><strong>Email:</strong> ${user?.email || "N/A"}</p>
+        <p><strong>Mobile:</strong> ${selectedAddress?.phoneNumber || "N/A"}</p>
+
+        <h3>📦 Delivery Address</h3>
+        <p>
+          Country: ${selectedAddress?.countryName || "N/A"}<br>
+          State: ${selectedAddress?.state || "N/A"}<br>
+          Town/City: ${selectedAddress?.town || "N/A"}<br>
+          Area: ${selectedAddress?.area || "N/A"}<br>
+          Landmark: ${selectedAddress?.landmark || "N/A"}<br>
+          Pincode: ${selectedAddress?.pincode || "N/A"}<br>
+          House No: ${selectedAddress?.houseNo || "N/A"}
+        </p>
+
+        <h3>🧾 Ordered Products</h3>
+        ${items?.map(i => `
+          <p>
+            <strong>Product Name:</strong> ${i.name}<br>
+            <strong>Product Price (per unit):</strong> ₹${i.price}<br>
+            <strong>Quantity:</strong> ${i.quantity}<br>
+            ${i.weightInGrams ? `<strong>Weight:</strong> ${i.weightInGrams} grams<br>` : ""}
+            <strong>Total for this product:</strong> ₹${i.priceWithQuantity}
+          </p><hr>
+        `).join("") || "<p>No items</p>"}
+
+        <h3>💰 Total Order Amount: ₹${items?.reduce((sum, i) => sum + i.priceWithQuantity, 0) || 0}</h3>
+      `;
 
       return {
         _id: notif._id,
-        title: notif.title,
-        body: notif.body,
         type: notif.type,
-        data: notif.data,
         createdAt: notif.createdAt,
         recipient: {
           userId: recipientData?.userId,
           isRead: recipientData?.isRead || false
-        }
+        },
+        htmlFormat: html // 🔹 Final formatted version
       };
     });
 
-    res.status(200).json(userNotifications);
+    res.status(200).json(formattedNotifications);
+
   } catch (err) {
     res.status(500).json({
       message: "Failed to fetch notifications",

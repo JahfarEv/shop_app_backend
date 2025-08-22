@@ -456,7 +456,16 @@ const handleStartSubscription = async (req, res) => {
     return res.status(500).json({ success: false, message: "Internal server error" });
   }
 };
+// const orderId = "order_R86ZPVGwDcYVTu"; // from /start-subscription response
+// const paymentId = "pay_test12345";      // you make this up for testing
+// const keySecret = "sLcyPlcVDpkpCNLZpeBOdONZ"; // your Razorpay test secret key
 
+// const signature = crypto
+//   .createHmac("sha256", keySecret)
+//   .update(orderId + "|" + paymentId)
+//   .digest("hex");
+
+// console.log("razorpay_signature:", signature);            
 // ✅ 2. Verify payment → Activate subscription
 const verifyPayment = async (req, res) => {
   const { razorpay_payment_id, razorpay_order_id, razorpay_signature } = req.body;
