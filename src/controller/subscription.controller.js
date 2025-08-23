@@ -6,16 +6,16 @@ const Notification = require("../models/notificationModel"); // ✅ Import Notif
 const { info, error, debug } = require("../middleware/logger");
 const admin = require("../config/admin");
 const SubscriptionPlan = require("../models/SubscriptionPlan");
-const { activateOrExtendSubscription } = require("../service/subscriptionService");
+const {
+  activateOrExtendSubscription,
+} = require("../service/subscriptionService");
 const Razorpay = require("razorpay");
 const crypto = require("crypto");
-
-
 
 // =================================================================================================
 // ============================== 🟢 HANDLE START OR EXTEND SUBSCRIPTION ============================
 // =================================================================================================
-// remember if same user buy the same plan again it will add up days and amount in the previous plan he bought first it will not show it as different different seperate subscription of that same user  
+// remember if same user buy the same plan again it will add up days and amount in the previous plan he bought first it will not show it as different different seperate subscription of that same user
 // async function handleStartSubscription(req, res) {
 //   const durationDays = Number(req.body.durationDays);
 //   const amount = Number(req.body.amount);
@@ -60,7 +60,7 @@ const crypto = require("crypto");
 
 //       const newSubscription = await Subscription.create({
 //         userId,
-//         subscriptionPlanId,   // added subscription plan id now we can access the subscription plan details too 
+//         subscriptionPlanId,   // added subscription plan id now we can access the subscription plan details too
 //         durationDays,
 //         amount,
 //         startDate,
@@ -133,8 +133,6 @@ const crypto = require("crypto");
 //     });
 //   }
 // }
-
-
 
 // async function handleStartSubscription(req, res) {
 //   const durationDays = Number(req.body.durationDays);
@@ -269,8 +267,6 @@ const crypto = require("crypto");
 //     });
 //   }
 // }
-
-
 
 // ==============================
 // Start / Extend Subscription (Shop-based)
@@ -413,9 +409,6 @@ const crypto = require("crypto");
 //   }
 // }
 
-
-
-
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
   key_secret: process.env.RAZORPAY_KEY_SECRET,
@@ -429,7 +422,9 @@ const handleStartSubscription = async (req, res) => {
   try {
     const plan = await SubscriptionPlan.findById(subscriptionPlanId);
     if (!plan) {
-      return res.status(404).json({ success: false, message: "Subscription plan not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Subscription plan not found" });
     }
 
     const amount = plan.amount * 100; // Razorpay expects paise
@@ -450,10 +445,13 @@ const handleStartSubscription = async (req, res) => {
       amount: order.amount,
       currency: order.currency,
       plan,
+      subscribed: true, // ✅ Added subscribed flag
     });
   } catch (err) {
     console.error("Failed to create Razorpay order:", err.message);
-    return res.status(500).json({ success: false, message: "Internal server error" });
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
   }
 };
 // const orderId = "order_R86ZPVGwDcYVTu"; // from /start-subscription response
@@ -465,10 +463,11 @@ const handleStartSubscription = async (req, res) => {
 //   .update(orderId + "|" + paymentId)
 //   .digest("hex");
 
-// console.log("razorpay_signature:", signature);            
+// console.log("razorpay_signature:", signature);
 // ✅ 2. Verify payment → Activate subscription
 const verifyPayment = async (req, res) => {
-  const { razorpay_payment_id, razorpay_order_id, razorpay_signature } = req.body;
+  const { razorpay_payment_id, razorpay_order_id, razorpay_signature } =
+    req.body;
 
   try {
     const body = razorpay_order_id + "|" + razorpay_payment_id;
@@ -479,7 +478,9 @@ const verifyPayment = async (req, res) => {
       .digest("hex");
 
     if (expectedSignature !== razorpay_signature) {
-      return res.status(400).json({ success: false, message: "Invalid signature" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid signature" });
     }
 
     // Fetch order to get notes
@@ -487,7 +488,11 @@ const verifyPayment = async (req, res) => {
     const { userId, shopId, subscriptionPlanId } = order.notes;
 
     // Call helper
-    const subscription = await activateOrExtendSubscription(userId, shopId, subscriptionPlanId);
+    const subscription = await activateOrExtendSubscription(
+      userId,
+      shopId,
+      subscriptionPlanId
+    );
 
     return res.status(200).json({
       success: true,
@@ -496,26 +501,26 @@ const verifyPayment = async (req, res) => {
     });
   } catch (err) {
     console.error("Payment verification failed:", err.message);
-    return res.status(500).json({ success: false, message: "Internal server error" });
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
   }
 };
 
 async function handleCheckSubscriptionStatus(req, res) {
   const userId = req.user.id;
-  
+
   debug(`Checking subscription status - User: ${userId}`);
 
   try {
     const user = await User.findById(userId).populate("subscriptionId");
     if (!user || !user.subscriptionId) {
       info(`No active subscription found - User: ${userId}`);
-      return res
-        .status(200)
-        .json({
-          success: true,
-          message: "No active subscription",
-          subscription: null,
-        });
+      return res.status(200).json({
+        success: true,
+        message: "No active subscription",
+        subscription: null,
+      });
     }
 
     const subscription = user.subscriptionId;
@@ -524,7 +529,9 @@ async function handleCheckSubscriptionStatus(req, res) {
     if (currentDate.isAfter(subscription.endDate)) {
       subscription.status = "expired";
       await subscription.save();
-      info(`Subscription expired - User: ${userId}, Subscription ID: ${subscription._id}`);
+      info(
+        `Subscription expired - User: ${userId}, Subscription ID: ${subscription._id}`
+      );
       return res
         .status(200)
         .json({ success: true, message: "Subscription expired", subscription });
@@ -537,10 +544,14 @@ async function handleCheckSubscriptionStatus(req, res) {
       .tz("Asia/Kolkata")
       .format();
 
-    debug(`Active subscription found - User: ${userId}, Status: ${subscription.status}, Plan: ${subscription.plan}`);
+    debug(
+      `Active subscription found - User: ${userId}, Status: ${subscription.status}, Plan: ${subscription.plan}`
+    );
     return res.status(200).json({ success: true, subscription });
   } catch (err) {
-    error(`Failed to check subscription status - User: ${userId}, Error: ${err.message}`);
+    error(
+      `Failed to check subscription status - User: ${userId}, Error: ${err.message}`
+    );
     return res
       .status(500)
       .json({ success: false, message: "Internal Server Error" });
@@ -554,7 +565,9 @@ async function handleGetAllSubscriptions(req, res) {
   debug(`Admin requesting all subscriptions - Admin: ${adminId}`);
 
   if (req.user.role !== "admin") {
-    info(`Unauthorized access attempt to subscriptions list - User: ${adminId}, Role: ${req.user.role}`);
+    info(
+      `Unauthorized access attempt to subscriptions list - User: ${adminId}, Role: ${req.user.role}`
+    );
     return res.status(403).json({
       success: false,
       message: "Access denied: Admin privileges required",
@@ -564,7 +577,9 @@ async function handleGetAllSubscriptions(req, res) {
   try {
     const subscriptions = await Subscription.find();
 
-    info(`Admin retrieved all subscriptions - Admin: ${adminId}, Count: ${subscriptions.length}`);
+    info(
+      `Admin retrieved all subscriptions - Admin: ${adminId}, Count: ${subscriptions.length}`
+    );
 
     const formattedSubscriptions = await Promise.all(
       subscriptions.map(async (subscription) => {
@@ -581,7 +596,9 @@ async function handleGetAllSubscriptions(req, res) {
 
         // ⬇️ Get subscription plan details
         if (sub.subscriptionPlanId) {
-          const plan = await mongoose.model("SubscriptionPlan").findById(sub.subscriptionPlanId);
+          const plan = await mongoose
+            .model("SubscriptionPlan")
+            .findById(sub.subscriptionPlanId);
           if (plan) {
             sub.subscriptionPlanDetails = {
               name: plan.name,
@@ -607,7 +624,9 @@ async function handleGetAllSubscriptions(req, res) {
       subscriptions: formattedSubscriptions,
     });
   } catch (err) {
-    error(`Failed to get all subscriptions - Admin: ${adminId}, Error: ${err.message}`);
+    error(
+      `Failed to get all subscriptions - Admin: ${adminId}, Error: ${err.message}`
+    );
     return res.status(500).json({
       success: false,
       message: "Internal Server Error",
@@ -615,18 +634,17 @@ async function handleGetAllSubscriptions(req, res) {
   }
 }
 
-// with specific user that subscription he bought we send subscription detials and subscription plan details also 
+// with specific user that subscription he bought we send subscription detials and subscription plan details also
 const handleSubscriptionByUser = async (req, res) => {
   const { userId } = req.params;
   console.log("User ID:", userId);
 
   try {
-    const subscriptions = await Subscription.find({ userId })
-      .populate({
-        path: "userId",
-        model: "user",
-        select: "name mobileNumber state place locality pincode subscriptionId",
-      });
+    const subscriptions = await Subscription.find({ userId }).populate({
+      path: "userId",
+      model: "user",
+      select: "name mobileNumber state place locality pincode subscriptionId",
+    });
 
     if (!subscriptions || subscriptions.length === 0) {
       return res
@@ -640,7 +658,9 @@ const handleSubscriptionByUser = async (req, res) => {
 
         // ⬇️ Add subscription plan details if available
         if (obj.subscriptionPlanId) {
-          const plan = await mongoose.model("SubscriptionPlan").findById(obj.subscriptionPlanId);
+          const plan = await mongoose
+            .model("SubscriptionPlan")
+            .findById(obj.subscriptionPlanId);
           if (plan) {
             obj.subscriptionPlanDetails = {
               name: plan.name,
@@ -666,27 +686,22 @@ const handleSubscriptionByUser = async (req, res) => {
   }
 };
 
-
-
-
 module.exports = {
   handleStartSubscription,
   verifyPayment,
   handleCheckSubscriptionStatus,
   handleGetAllSubscriptions,
-  handleSubscriptionByUser
+  handleSubscriptionByUser,
 };
-
 
 // route for postman test start subscription
 
 // api/subscription/start-subscription
 
-// postman testing payload for start subscription 
+// postman testing payload for start subscription
 
 // {
 //   "durationDays": 30,
 //   "amount": 299,
 //   "subscriptionPlanId": "6659ec2fcde435f7d27c4a01"
 // }
-

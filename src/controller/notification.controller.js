@@ -75,46 +75,74 @@ const getSpecificRecipientandallNotifications = async (req, res) => {
       recipients: { $elemMatch: { userId, isRead: false } }
     }).lean();
 
-    // 🔹 Transform into grouped order-style format
-    const formattedNotifications = notifications.map((notif) => {
+    if (!notifications.length) {
+      return res.status(200).json({ message: "No unread notifications", notifications: [] });
+    }
+
+    // 🔹 Final response array
+    const formattedNotifications = [];
+
+    for (const notif of notifications) {
       const recipientData = notif.recipients.find(r => r.userId.toString() === userId);
 
-      // Assume notif.data contains shop, user, items, etc.
       const { shop, user, selectedAddress, items } = notif.data || {};
 
-      const html = `
-        <h2>🛒 ${notif.title}</h2>
-        <h3>👤 Customer Details</h3>
-        <p><strong>Name:</strong> ${user?.name || "N/A"}</p>
-        <p><strong>Email:</strong> ${user?.email || "N/A"}</p>
-        <p><strong>Mobile:</strong> ${selectedAddress?.phoneNumber || "N/A"}</p>
+      // 🔹 GROUP ITEMS SHOP-WISE
+      const shopWiseMap = new Map();
+      (items || []).forEach((item) => {
+        const shopId = item.shop._id.toString();
+        if (!shopWiseMap.has(shopId)) {
+          shopWiseMap.set(shopId, {
+            shop: item.shop,
+            items: [],
+          });
+        }
+        shopWiseMap.get(shopId).items.push(item);
+      });
 
-        <h3>📦 Delivery Address</h3>
-        <p>
-          Country: ${selectedAddress?.countryName || "N/A"}<br>
-          State: ${selectedAddress?.state || "N/A"}<br>
-          Town/City: ${selectedAddress?.town || "N/A"}<br>
-          Area: ${selectedAddress?.area || "N/A"}<br>
-          Landmark: ${selectedAddress?.landmark || "N/A"}<br>
-          Pincode: ${selectedAddress?.pincode || "N/A"}<br>
-          House No: ${selectedAddress?.houseNo || "N/A"}
-        </p>
+      // 🔹 Build shop-wise formatted data
+      const shopsFormatted = [];
+      for (let [shopId, data] of shopWiseMap.entries()) {
+        const html = `
+          <h2>🛒 ${notif.title}</h2>
+          <h3>👤 Customer Details</h3>
+          <p><strong>Name:</strong> ${user?.name || "N/A"}</p>
+          <p><strong>Email:</strong> ${user?.email || "N/A"}</p>
+          <p><strong>Mobile:</strong> ${selectedAddress?.phoneNumber || "N/A"}</p>
 
-        <h3>🧾 Ordered Products</h3>
-        ${items?.map(i => `
+          <h3>📦 Delivery Address</h3>
           <p>
-            <strong>Product Name:</strong> ${i.name}<br>
-            <strong>Product Price (per unit):</strong> ₹${i.price}<br>
-            <strong>Quantity:</strong> ${i.quantity}<br>
-            ${i.weightInGrams ? `<strong>Weight:</strong> ${i.weightInGrams} grams<br>` : ""}
-            <strong>Total for this product:</strong> ₹${i.priceWithQuantity}
-          </p><hr>
-        `).join("") || "<p>No items</p>"}
+            Country: ${selectedAddress?.countryName || "N/A"}<br>
+            State: ${selectedAddress?.state || "N/A"}<br>
+            Town/City: ${selectedAddress?.town || "N/A"}<br>
+            Area: ${selectedAddress?.area || "N/A"}<br>
+            Landmark: ${selectedAddress?.landmark || "N/A"}<br>
+            Pincode: ${selectedAddress?.pincode || "N/A"}<br>
+            House No: ${selectedAddress?.houseNo || "N/A"}
+          </p>
 
-        <h3>💰 Total Order Amount: ₹${items?.reduce((sum, i) => sum + i.priceWithQuantity, 0) || 0}</h3>
-      `;
+          <h3>🧾 Ordered Products</h3>
+          ${data.items.map(i => `
+            <p>
+              <strong>Product Name:</strong> ${i.name}<br>
+              <strong>Product Price (per unit):</strong> ₹${i.price}<br>
+              <strong>Quantity:</strong> ${i.quantity}<br>
+              ${i.weightInGrams ? `<strong>Weight:</strong> ${i.weightInGrams} grams<br>` : ""}
+              <strong>Total for this product:</strong> ₹${i.priceWithQuantity}
+            </p><hr>
+          `).join("")}
 
-      return {
+          <h3>💰 Total Order Amount: ₹${data.items.reduce((sum, i) => sum + i.priceWithQuantity, 0)}</h3>
+        `;
+
+        shopsFormatted.push({
+          shop: data.shop,
+          items: data.items,
+          html,
+        });
+      }
+
+      formattedNotifications.push({
         _id: notif._id,
         type: notif.type,
         createdAt: notif.createdAt,
@@ -122,11 +150,14 @@ const getSpecificRecipientandallNotifications = async (req, res) => {
           userId: recipientData?.userId,
           isRead: recipientData?.isRead || false
         },
-        htmlFormat: html // 🔹 Final formatted version
-      };
-    });
+        shops: shopsFormatted, // ✅ shop-wise grouping here
+      });
+    }
 
-    res.status(200).json(formattedNotifications);
+    res.status(200).json({
+      message: "Unread notifications fetched",
+      notifications: formattedNotifications,
+    });
 
   } catch (err) {
     res.status(500).json({
@@ -135,7 +166,6 @@ const getSpecificRecipientandallNotifications = async (req, res) => {
     });
   }
 };
-
 
 
 
