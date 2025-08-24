@@ -203,6 +203,7 @@ async function handleUserLogin(req, res) {
       password,
       existingUser.password
     );
+console.log(isPasswordValid,'pass');
 
     if (!isPasswordValid) {
       info(`Login failed: Invalid password - UserID: ${existingUser._id}, Name: ${existingUser.name}`);

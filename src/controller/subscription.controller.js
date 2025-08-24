@@ -445,7 +445,7 @@ const handleStartSubscription = async (req, res) => {
       amount: order.amount,
       currency: order.currency,
       plan,
-      subscribed: true, // ✅ Added subscribed flag
+      razorpayKey: process.env.RAZORPAY_KEY_ID, // ✅ send public key for frontend
     });
   } catch (err) {
     console.error("Failed to create Razorpay order:", err.message);
