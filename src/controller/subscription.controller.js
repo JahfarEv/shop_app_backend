@@ -11,6 +11,7 @@ const {
 } = require("../service/subscriptionService");
 const Razorpay = require("razorpay");
 const crypto = require("crypto");
+const Shop = require("../models/storeModel");
 
 // =================================================================================================
 // ============================== 🟢 HANDLE START OR EXTEND SUBSCRIPTION ============================
@@ -426,7 +427,16 @@ const handleStartSubscription = async (req, res) => {
         .status(404)
         .json({ success: false, message: "Subscription plan not found" });
     }
+  const shop = await Shop.findById(shopId, {
+      "subscription.startDate": 1,
+      "subscription.endDate": 1,
+      "subscription.isActive": 1,
+      _id: 0
+    }).lean();
 
+    if (!shop) {
+      return res.status(404).json({ success: false, message: "Shop not found" });
+    }
     const amount = plan.amount * 100; // Razorpay expects paise
 
     const options = {
@@ -445,6 +455,7 @@ const handleStartSubscription = async (req, res) => {
       amount: order.amount,
       currency: order.currency,
       plan,
+  subscription: shop.subscription, // ✅ directly return subscription
       razorpayKey: process.env.RAZORPAY_KEY_ID, // ✅ send public key for frontend
     });
   } catch (err) {
@@ -454,16 +465,7 @@ const handleStartSubscription = async (req, res) => {
       .json({ success: false, message: "Internal server error" });
   }
 };
-// const orderId = "order_R86ZPVGwDcYVTu"; // from /start-subscription response
-// const paymentId = "pay_test12345";      // you make this up for testing
-// const keySecret = "sLcyPlcVDpkpCNLZpeBOdONZ"; // your Razorpay test secret key
 
-// const signature = crypto
-//   .createHmac("sha256", keySecret)
-//   .update(orderId + "|" + paymentId)
-//   .digest("hex");
-
-// console.log("razorpay_signature:", signature);
 // ✅ 2. Verify payment → Activate subscription
 const verifyPayment = async (req, res) => {
   const { razorpay_payment_id, razorpay_order_id, razorpay_signature } =

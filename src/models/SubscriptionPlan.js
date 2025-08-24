@@ -49,10 +49,10 @@ const subscriptionPlanSchema = new mongoose.Schema({
     default: "",
     trim: true,
   },
-  isSubscribed: {
-    type: Boolean,
-    default: false, // initially false
-  },
+  // isSubscribed: {
+  //   type: Boolean,
+  //   default: false, // initially false
+  // },
   createdAt: { type: Date, default: Date.now },
 });
 
