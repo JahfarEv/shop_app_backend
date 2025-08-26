@@ -348,7 +348,7 @@ console.log('Available addresses:', addressDoc?.addresses?.map(a => a._id.toStri
       orderId: order._id,
       shopId: shop._id,
       ...fullDetails, // inject full order details
-                html: orderHtml, // ✅ Save HTML also
+                html: buildOrderHtml, // ✅ Save HTML also
 
     },
   });

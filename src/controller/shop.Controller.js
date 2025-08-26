@@ -9,7 +9,7 @@ const Notification = require("../models/notificationModel"); // ✅ Add this
 const admin = require("../config/admin");
 const Salesman = require("../models/Salesman.model");
 const CommissionSettings = require("../models/salesmanCommisionSettings")
-
+const axios = require("axios")
 
 // ✅ Create Shop 
 
@@ -129,10 +129,261 @@ const CommissionSettings = require("../models/salesmanCommisionSettings")
 
 
 
+// const createShop = async (req, res) => {
+//   try {
+
+//      const cleanBody = {};
+//     for (let key in req.body) {
+//       const cleanKey = key.trim();
+//       cleanBody[cleanKey] = req.body[key];
+//     }
+
+//     console.log("📥 Cleaned Request Body:", cleanBody);
+
+//     const {
+//       shopName,
+//       category,
+//       sellerType,
+//       state,
+//       locality,
+//       place,
+//       pinCode,
+//       userId,
+//       email,
+//       mobileNumber,
+//       landlineNumber,
+//       agentCode,
+//     } = cleanBody;
+
+
+//      const existingShop = await Shop.findOne({ mobileNumber });
+//     if (existingShop) {
+//       return res.status(StatusCodes.CONFLICT).json({
+//         message: "Mobile number already registered with another shop",
+//       });
+//     }
+//     let imageUrl = null;
+//     if (req.file) {
+//       const result = await cloudinary.v2.uploader.upload(req.file.path, {
+//         folder: "shops",
+//       });
+//       imageUrl = result.secure_url;
+//       fs.unlinkSync(req.file.path);
+//     }
+
+//     // ✅ Check if agent code matches any Salesman
+//     let matchedSalesman = null;
+//     if (agentCode) {
+//       matchedSalesman = await Salesman.findOne({ agentCode: agentCode });
+//     }
+
+//     // ✅ Create shop
+//     const newShop = new Shop({
+//       shopName,
+//       category: Array.isArray(category) ? category : [category],
+//       sellerType,
+//       state,
+//       locality,
+//       place,
+//       pinCode,
+//       headerImage: imageUrl,
+//       owner: userId,
+//       email,
+//       mobileNumber,
+//       landlineNumber,
+//       agentCode,
+//       registeredBySalesman: matchedSalesman ? matchedSalesman._id : null,
+//     });
+
+//     await newShop.save();
+
+//   if (matchedSalesman) {
+//   matchedSalesman.shopsAddedBySalesman.push(newShop._id);
+
+//   // ✅ Fetch current commission amount from settings
+//   const settings = await CommissionSettings.findOne();
+//   const commission = settings?.salesCommission || 0;
+
+//   // ✅ Push new entry into salesCommissionEarned
+//   matchedSalesman.salesCommissionEarned.push({
+//     shop: newShop._id,
+//     amount: commission,
+//   });
+
+//   await matchedSalesman.save();
+// }
+
+
+//     // 🔔 Send FCM Notification
+//     const users = await userModel.find({ fcmTokens: { $exists: true, $ne: [] } });
+//     const allTokens = users.flatMap((user) => user.fcmTokens);
+//     let fcmResponse = null;
+
+//     if (allTokens.length > 0) {
+//       const message = {
+//         notification: {
+//           title: "🛍️ New Shop Alert!",
+//           body: `Check out new shop "${shopName}". Explore now!`,
+//         },
+//         tokens: allTokens,
+//       };
+//       fcmResponse = await admin.messaging().sendEachForMulticast(message);
+//       info(`✅ FCM Notification Summary:\nTotal Sent: ${allTokens.length}\nSuccess Count: ${fcmResponse.successCount}\nFailure Count: ${fcmResponse.failureCount}`);
+//     }
+
+//     // 💾 Save notification
+//     const notificationDoc = new Notification({
+//       title: "🛍️ New Shop Alert!",
+//       body: `Check out new shop "${shopName}". Explore now!`,
+//       type: "new_shop",
+//       recipients: users.map((user) => ({
+//         userId: user._id,
+//         isRead: false,
+//       })),
+//       data: {
+//         shopId: newShop._id,
+//         shopName: shopName,
+//       },
+//     });
+
+//     await notificationDoc.save();
+
+//     res.status(StatusCodes.CREATED).json({
+//       message: "Shop created successfully",
+//       shop: newShop,
+//       fcm: {
+//         successCount: fcmResponse?.successCount || 0,
+//         failureCount: fcmResponse?.failureCount || 0,
+//       },
+//     });
+
+//   } catch (err) {
+//     error("❌ Error in createShop:", err);
+//     res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+//       message: err.message || "Server error",
+//       error: err,
+//     });
+//   }
+// };
+
+
+const sendSMS = async (mobileNumber, message) => {
+  try {
+    const response = await axios.post(
+      'https://cpaas.messagecentral.com/verification/v2/send',
+      {
+        countryCode: "91",
+        mobileNumber: mobileNumber,
+        flowType: "SMS",
+        message: message
+      },
+      {
+        headers: {
+          'Authorization': `Bearer ${process.env.MESSAGE_CENTRAL_AUTH_TOKEN}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    console.log('SMS sent successfully:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('SMS sending error:', error.response?.data || error.message);
+    throw error;
+  }
+};
+
+// Helper to generate 6-digit OTP
+const generateOtp = () => {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+};
+
+// Temporary OTP storage (you might want to use Redis in production)
+const otpStore = new Map();
+
+// Step 1: Send OTP for shop creation
+const sendShopCreationOTP = async (req, res) => {
+  try {
+    const { mobileNumber } = req.body;
+
+    if (!mobileNumber) {
+      return res.status(400).json({ message: "Mobile number is required" });
+    }
+
+    // Check if mobile number is already registered
+    const existingShop = await Shop.findOne({ mobileNumber });
+    if (existingShop) {
+      return res.status(StatusCodes.CONFLICT).json({
+        message: "Mobile number already registered with another shop",
+      });
+    }
+
+    const otp = generateOtp();
+    const otpExpiry = Date.now() + 5 * 60 * 1000; // 5 minutes
+
+    // Store OTP temporarily (in production, consider using Redis)
+    otpStore.set(mobileNumber, {
+      otp: otp,
+      expiry: otpExpiry,
+      verified: false
+    });
+
+    const smsMessage = `Your OTP for shop registration is ${otp}. It will expire in 5 minutes. Do not share this OTP with anyone.`;
+    await sendSMS(mobileNumber, smsMessage);
+
+    res.status(200).json({ 
+      message: "OTP sent to your mobile number for shop registration verification",
+      mobileNumber: mobileNumber
+    });
+
+  } catch (err) {
+    console.error("Send shop OTP error:", err);
+    res.status(500).json({ message: "Server error while sending OTP" });
+  }
+};
+
+// Step 2: Verify OTP for shop creation
+const verifyShopCreationOTP = async (req, res) => {
+  try {
+    const { mobileNumber, otp } = req.body;
+
+    if (!mobileNumber || !otp) {
+      return res.status(400).json({ message: "Mobile number and OTP are required" });
+    }
+
+    const storedOtpData = otpStore.get(mobileNumber);
+    if (!storedOtpData) {
+      return res.status(400).json({ message: "OTP not found. Please request a new OTP." });
+    }
+
+    if (storedOtpData.otp !== otp) {
+      return res.status(400).json({ message: "Invalid OTP" });
+    }
+
+    if (Date.now() > storedOtpData.expiry) {
+      otpStore.delete(mobileNumber);
+      return res.status(400).json({ message: "OTP expired. Please request a new OTP." });
+    }
+
+    // Mark as verified
+    storedOtpData.verified = true;
+    otpStore.set(mobileNumber, storedOtpData);
+
+    res.status(200).json({ 
+      message: "OTP verified successfully. You can now create your shop.",
+      verified: true
+    });
+
+  } catch (err) {
+    console.error("Verify shop OTP error:", err);
+    res.status(500).json({ message: "Server error while verifying OTP" });
+  }
+};
+
+// Step 3: Modified createShop function with OTP verification
 const createShop = async (req, res) => {
   try {
-
-     const cleanBody = {};
+    const cleanBody = {};
     for (let key in req.body) {
       const cleanKey = key.trim();
       cleanBody[cleanKey] = req.body[key];
@@ -153,7 +404,39 @@ const createShop = async (req, res) => {
       mobileNumber,
       landlineNumber,
       agentCode,
+      otp, // Add OTP to the request body
     } = cleanBody;
+
+    // ✅ Verify OTP before proceeding
+    if (!otp) {
+      return res.status(400).json({ message: "OTP is required for shop creation" });
+    }
+
+    const storedOtpData = otpStore.get(mobileNumber);
+    if (!storedOtpData) {
+      return res.status(400).json({ message: "OTP not found. Please request a new OTP." });
+    }
+
+    if (!storedOtpData.verified) {
+      return res.status(400).json({ message: "Please verify your OTP first" });
+    }
+
+    if (storedOtpData.otp !== otp) {
+      return res.status(400).json({ message: "Invalid OTP" });
+    }
+
+    if (Date.now() > storedOtpData.expiry) {
+      otpStore.delete(mobileNumber);
+      return res.status(400).json({ message: "OTP expired. Please request a new OTP." });
+    }
+
+    // ✅ Double-check mobile number availability
+    const existingShop = await Shop.findOne({ mobileNumber });
+    if (existingShop) {
+      return res.status(StatusCodes.CONFLICT).json({
+        message: "Mobile number already registered with another shop",
+      });
+    }
 
     let imageUrl = null;
     if (req.file) {
@@ -186,26 +469,28 @@ const createShop = async (req, res) => {
       landlineNumber,
       agentCode,
       registeredBySalesman: matchedSalesman ? matchedSalesman._id : null,
+      isVerified: true, // Mark as verified since OTP was successful
     });
 
     await newShop.save();
 
-  if (matchedSalesman) {
-  matchedSalesman.shopsAddedBySalesman.push(newShop._id);
+    // ✅ Clear OTP after successful shop creation
+    otpStore.delete(mobileNumber);
 
-  // ✅ Fetch current commission amount from settings
-  const settings = await CommissionSettings.findOne();
-  const commission = settings?.salesCommission || 0;
+    if (matchedSalesman) {
+      matchedSalesman.shopsAddedBySalesman.push(newShop._id);
+      // ✅ Fetch current commission amount from settings
+      const settings = await CommissionSettings.findOne();
+      const commission = settings?.salesCommission || 0;
 
-  // ✅ Push new entry into salesCommissionEarned
-  matchedSalesman.salesCommissionEarned.push({
-    shop: newShop._id,
-    amount: commission,
-  });
+      // ✅ Push new entry into salesCommissionEarned
+      matchedSalesman.salesCommissionEarned.push({
+        shop: newShop._id,
+        amount: commission,
+      });
 
-  await matchedSalesman.save();
-}
-
+      await matchedSalesman.save();
+    }
 
     // 🔔 Send FCM Notification
     const users = await userModel.find({ fcmTokens: { $exists: true, $ne: [] } });
@@ -241,8 +526,17 @@ const createShop = async (req, res) => {
 
     await notificationDoc.save();
 
+    // 📱 Send confirmation SMS to shop owner
+    const confirmationMessage = `Congratulations! Your shop "${shopName}" has been successfully registered. Shop ID: ${newShop._id}`;
+    try {
+      await sendSMS(mobileNumber, confirmationMessage);
+    } catch (smsError) {
+      console.error("Failed to send confirmation SMS:", smsError);
+      // Don't fail the entire operation if SMS fails
+    }
+
     res.status(StatusCodes.CREATED).json({
-      message: "Shop created successfully",
+      message: "Shop created successfully with OTP verification",
       shop: newShop,
       fcm: {
         successCount: fcmResponse?.successCount || 0,
@@ -259,7 +553,18 @@ const createShop = async (req, res) => {
   }
 };
 
+// Optional: Clean up expired OTPs periodically
+const cleanupExpiredOTPs = () => {
+  const now = Date.now();
+  for (const [mobileNumber, otpData] of otpStore.entries()) {
+    if (now > otpData.expiry) {
+      otpStore.delete(mobileNumber);
+    }
+  }
+};
 
+// Run cleanup every 5 minutes
+setInterval(cleanupExpiredOTPs, 5 * 60 * 1000);
 
 // get all shops for user module not for admin pannel
 
@@ -540,6 +845,9 @@ const AdminChangeShopBanStatus = async (req, res) => {
 
 module.exports = {
   createShop,
+  sendShopCreationOTP,
+  verifyShopCreationOTP,
+  sendSMS,
   getShops,
   AdminGetAllShops,
   getShopById,

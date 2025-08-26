@@ -20,7 +20,7 @@ const shopSchema = mongoose.Schema(
     },
     email: { type: String },
     landlineNumber: { type: String },
-    mobileNumber: { type: String },
+    mobileNumber: { type: String, required: true, unique: true }, // ✅ UNIQUE
     isBanned: {
       type: Boolean,
       default: false,
@@ -34,7 +34,7 @@ const shopSchema = mongoose.Schema(
       ref: "Salesman",
       default: null,
     },
-      subscription: {
+    subscription: {
       plan: { type: mongoose.Schema.Types.ObjectId, ref: "SubscriptionPlan" },
       startDate: { type: Date },
       endDate: { type: Date },

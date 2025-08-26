@@ -7,6 +7,9 @@ const { verifyToken } = require("../middleware/verifyToken");
 // CRUD routes - /api/shops
 
 router.post("/", upload.single("headerImage"), shopController.createShop); // Create shop
+router.post("/send-shop-otp", shopController.sendShopCreationOTP)
+router.post("/verify-shop-otp", shopController.verifyShopCreationOTP)
+
 router.get("/", shopController.getShops); // Get all shops
 router.get("/nearby/:userId", shopController.getNearbyShops);
 router.get("/search/:term/:userId", shopController.searchShopController);
