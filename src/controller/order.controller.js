@@ -228,6 +228,57 @@ console.log('Available addresses:', addressDoc?.addresses?.map(a => a._id.toStri
     const uniqueShopIds = [...new Set(populatedItems.map(i => i.shop._id.toString()))];
     const shops = await Shop.find({ _id: { $in: uniqueShopIds } });
 
+     function buildOrderHtml(fullDetails) {
+      return `
+        <div style="font-family: Arial, sans-serif; padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
+          <h2 style="color:#2c3e50;">🛒 New Order from ${fullDetails.customer.name}</h2>
+          <h3>👤 Customer Details</h3>
+          <p><strong>Name:</strong> ${fullDetails.customer.name}<br/>
+             <strong>Email:</strong> ${fullDetails.customer.email}<br/>
+             <strong>Phone:</strong> ${fullDetails.customer.phone}</p>
+          
+          <h3>📍 Delivery Address</h3>
+          <p>
+            ${fullDetails.address.houseNo}, ${fullDetails.address.area},<br/>
+            ${fullDetails.address.town}, ${fullDetails.address.state},<br/>
+            ${fullDetails.address.country} - ${fullDetails.address.pincode}<br/>
+            Landmark: ${fullDetails.address.landmark}
+          </p>
+
+          <h3>🧾 Items</h3>
+          <table border="1" cellspacing="0" cellpadding="8" style="border-collapse: collapse; width: 100%;">
+            <thead style="background: #f4f4f4;">
+              <tr>
+                <th>Name</th><th>Qty</th><th>Price</th><th>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${fullDetails.items
+                .map(
+                  (i) => `
+                <tr>
+                  <td>${i.name}</td>
+                  <td>${i.quantity}${
+                    i.weightInGrams ? ` (${i.weightInGrams}g)` : ""
+                  }</td>
+                  <td>₹${i.price}</td>
+                  <td>₹${i.priceWithQuantity}</td>
+                </tr>
+              `
+                )
+                .join("")}
+            </tbody>
+          </table>
+
+          <h3 style="margin-top:10px;">💰 Total: ₹${fullDetails.totalAmount}</h3>
+          <p><small>🕒 Ordered At: ${new Date(
+            fullDetails.orderTime
+          ).toLocaleString()}</small></p>
+        </div>
+      `;
+    }
+
+
     // for (let shop of shops) {
     //   const notificationDoc = new Notification({
     //     title: "🛒 New Order Alert!",
@@ -297,6 +348,8 @@ console.log('Available addresses:', addressDoc?.addresses?.map(a => a._id.toStri
       orderId: order._id,
       shopId: shop._id,
       ...fullDetails, // inject full order details
+                html: orderHtml, // ✅ Save HTML also
+
     },
   });
 

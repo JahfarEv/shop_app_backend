@@ -10,13 +10,13 @@ const getUserNotifications = async (req, res) => {
       recipients: {
         $elemMatch: {
           userId,
-          isRead: false,
+          // isRead: false,
         },
       },
     }).sort({ createdAt: -1 });
 
     res.status(200).json({
-      message: "Unread notifications fetched",
+      message: "notifications fetched",
       notifications,
     });
   } catch (err) {
