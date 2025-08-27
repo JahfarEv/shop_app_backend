@@ -227,7 +227,9 @@ console.log('Available addresses:', addressDoc?.addresses?.map(a => a._id.toStri
     // =============================================================================================
     const uniqueShopIds = [...new Set(populatedItems.map(i => i.shop._id.toString()))];
     const shops = await Shop.find({ _id: { $in: uniqueShopIds } });
-
+for(let shop of shops){
+  
+}
      function buildOrderHtml(fullDetails) {
       return `
         <div style="font-family: Arial, sans-serif; padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
@@ -279,35 +281,10 @@ console.log('Available addresses:', addressDoc?.addresses?.map(a => a._id.toStri
     }
 
 
-    // for (let shop of shops) {
-    //   const notificationDoc = new Notification({
-    //     title: "🛒 New Order Alert!",
-    //     body: `🎉 You received a new order from ${user.name} on ${order.createdAt}. Check your email for full details.`,
-    //     type: "order",
-    //     recipients: [
-    //       {
-    //         userId: shop.owner,
-    //         isRead: false,
-    //       },
-    //     ],
-    //     data: {
-    //       orderId: order._id,
-    //       shopId: shop._id,
-    //       userName: user.name,
-    //       orderTime: order.createdAt,
-    //     },
-    //   });
-
-    //   await notificationDoc.save();
-    // }
+    for (let shop of shops) {
 
 
-
-    for (let [shopId, data] of shopWiseMap.entries()) {
-  const shop = data.shop;
-
-  // 📦 Build full details (same as email)
-  const fullDetails = {
+      const fullDetails = {
     customer: {
       name: user.name,
       email: user.email,
@@ -333,28 +310,83 @@ console.log('Available addresses:', addressDoc?.addresses?.map(a => a._id.toStri
     orderTime: order.createdAt,
   };
 
-  // 🔔 Save notification with full details
-  const notificationDoc = new Notification({
-    title: "🛒 New Order Alert!",
-    body: `🎉 You received a new order from ${user.name}.`,
-    type: "order",
-    recipients: [
-      {
-        userId: shop.owner,
-        isRead: false,
-      },
-    ],
-    data: {
-      orderId: order._id,
-      shopId: shop._id,
-      ...fullDetails, // inject full order details
-                html: buildOrderHtml, // ✅ Save HTML also
+      const notificationDoc = new Notification({
+        title: "🛒 New Order Alert!",
+        body: `🎉 You received a new order from ${user.name} on ${order.createdAt}. Check your email for full details.`,
+        type: "order",
+        recipients: [
+          {
+            userId: shop.owner,
+            isRead: false,
+          },
+        ],
+        data: {
+          orderId: order._id,
+          shopId: shop._id,
+          userName: user.name,
+          orderTime: order.createdAt,
+          fullDetails,
+          html:buildOrderHtml
+        },
+      });
 
-    },
-  });
+      await notificationDoc.save();
+    }
 
-  await notificationDoc.save();
-}
+
+
+//     for (let [shopId, data] of shopWiseMap.entries()) {
+//   const shop = data.shop;
+
+//   // 📦 Build full details (same as email)
+//   const fullDetails = {
+//     customer: {
+//       name: user.name,
+//       email: user.email,
+//       phone: selectedAddress.phoneNumber,
+//     },
+//     address: {
+//       country: selectedAddress.countryName,
+//       state: selectedAddress.state,
+//       town: selectedAddress.town,
+//       area: selectedAddress.area,
+//       landmark: selectedAddress.landmark || "N/A",
+//       pincode: selectedAddress.pincode,
+//       houseNo: selectedAddress.houseNo || "N/A",
+//     },
+//     items: data.items.map(i => ({
+//       name: i.name,
+//       price: i.price,
+//       quantity: i.quantity,
+//       weightInGrams: i.weightInGrams || null,
+//       priceWithQuantity: i.priceWithQuantity,
+//     })),
+//     totalAmount: data.items.reduce((sum, i) => sum + i.priceWithQuantity, 0),
+//     orderTime: order.createdAt,
+//   };
+
+//   // 🔔 Save notification with full details
+//   const notificationDoc = new Notification({
+//     title: "🛒 New Order Alert!",
+//     body: `🎉 You received a new order from ${user.name}.`,
+//     type: "order",
+//     recipients: [
+//       {
+//         userId: shop.owner,
+//         isRead: false,
+//       },
+//     ],
+//     data: {
+//       orderId: order._id,
+//       shopId: shop._id,
+//       ...fullDetails, // inject full order details
+//                 html: buildOrderHtml, // ✅ Save HTML also
+
+//     },
+//   });
+
+//   await notificationDoc.save();
+// }
 
 
     // =============================================================================================
