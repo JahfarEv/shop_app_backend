@@ -227,9 +227,7 @@ console.log('Available addresses:', addressDoc?.addresses?.map(a => a._id.toStri
     // =============================================================================================
     const uniqueShopIds = [...new Set(populatedItems.map(i => i.shop._id.toString()))];
     const shops = await Shop.find({ _id: { $in: uniqueShopIds } });
-for(let shop of shops){
-  
-}
+
      function buildOrderHtml(fullDetails) {
       return `
         <div style="font-family: Arial, sans-serif; padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
@@ -283,7 +281,9 @@ for(let shop of shops){
 
     for (let shop of shops) {
 
+const data = shopWiseMap.get(shop._id.toString());
 
+  if (!data) continue; // safety check
       const fullDetails = {
     customer: {
       name: user.name,
@@ -326,7 +326,7 @@ for(let shop of shops){
           userName: user.name,
           orderTime: order.createdAt,
           fullDetails,
-          html:buildOrderHtml
+          html:buildOrderHtml(fullDetails)
         },
       });
 
