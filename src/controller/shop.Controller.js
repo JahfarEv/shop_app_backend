@@ -10,6 +10,8 @@ const admin = require("../config/admin");
 const Salesman = require("../models/Salesman.model");
 const CommissionSettings = require("../models/salesmanCommisionSettings")
 const axios = require("axios")
+const Otp = require("../models/otpModel");
+const crypto = require("crypto");
 
 // ✅ Create Shop 
 
@@ -267,29 +269,38 @@ const axios = require("axios")
 // };
 
 
-const sendSMS = async (mobileNumber, message) => {
+const sendSMS = async (req, res) => {
   try {
+    const { mobileNumber } = req.body;
+
+    if (!mobileNumber) {
+      return res.status(400).json({ success: false, message: "Mobile number is required" });
+    }
+
+    const url = `https://cpaas.messagecentral.com/verification/v3/send?countryCode=91&customerId=${process.env.MESSAGE_CENTRAL_CUSTOMER_ID}&flowType=SMS&mobileNumber=${mobileNumber}`;
+
     const response = await axios.post(
-      'https://cpaas.messagecentral.com/verification/v2/send',
-      {
-        countryCode: "91",
-        mobileNumber: mobileNumber,
-        flowType: "SMS",
-        message: message
-      },
+      url,
+      {},
       {
         headers: {
-          'Authorization': `Bearer ${process.env.MESSAGE_CENTRAL_AUTH_TOKEN}`,
-          'Content-Type': 'application/json'
-        }
+          authToken: process.env.MESSAGE_CENTRAL_AUTH_TOKEN,
+        },
       }
     );
 
-    console.log('SMS sent successfully:', response.data);
-    return response.data;
+    return res.status(200).json({
+      success: true,
+      message: "OTP sent successfully",
+      data: response.data,
+    });
   } catch (error) {
-    console.error('SMS sending error:', error.response?.data || error.message);
-    throw error;
+    console.error("❌ Error sending OTP:", error.response?.data || error.message);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to send OTP",
+      error: error.response?.data || error.message,
+    });
   }
 };
 
@@ -302,81 +313,53 @@ const generateOtp = () => {
 const otpStore = new Map();
 
 // Step 1: Send OTP for shop creation
-const sendShopCreationOTP = async (req, res) => {
-  try {
-    const { mobileNumber } = req.body;
 
-    if (!mobileNumber) {
-      return res.status(400).json({ message: "Mobile number is required" });
-    }
-
-    // Check if mobile number is already registered
-    const existingShop = await Shop.findOne({ mobileNumber });
-    if (existingShop) {
-      return res.status(StatusCodes.CONFLICT).json({
-        message: "Mobile number already registered with another shop",
-      });
-    }
-
-    const otp = generateOtp();
-    const otpExpiry = Date.now() + 5 * 60 * 1000; // 5 minutes
-
-    // Store OTP temporarily (in production, consider using Redis)
-    otpStore.set(mobileNumber, {
-      otp: otp,
-      expiry: otpExpiry,
-      verified: false
-    });
-
-    const smsMessage = `Your OTP for shop registration is ${otp}. It will expire in 5 minutes. Do not share this OTP with anyone.`;
-    await sendSMS(mobileNumber, smsMessage);
-
-    res.status(200).json({ 
-      message: "OTP sent to your mobile number for shop registration verification",
-      mobileNumber: mobileNumber
-    });
-
-  } catch (err) {
-    console.error("Send shop OTP error:", err);
-    res.status(500).json({ message: "Server error while sending OTP" });
-  }
-};
 
 // Step 2: Verify OTP for shop creation
-const verifyShopCreationOTP = async (req, res) => {
+const verifyShopCreationOTP =  async (req, res) => {
   try {
     const { mobileNumber, otp } = req.body;
 
     if (!mobileNumber || !otp) {
-      return res.status(400).json({ message: "Mobile number and OTP are required" });
+      return res.status(400).json({ success: false, message: "Mobile number and OTP are required" });
     }
 
-    const storedOtpData = otpStore.get(mobileNumber);
-    if (!storedOtpData) {
-      return res.status(400).json({ message: "OTP not found. Please request a new OTP." });
+    const url = `https://cpaas.messagecentral.com/verification/v3/verify?countryCode=91&customerId=${process.env.MESSAGE_CENTRAL_CUSTOMER_ID}&flowType=SMS&mobileNumber=${mobileNumber}&otp=${otp}`;
+console.log(process.env.MESSAGE_CENTRAL_CUSTOMER_ID);
+
+console.log(process.env.MESSAGE_CENTRAL_AUTH_TOKEN,'kkk');
+    const response = await axios.post(
+      url,
+      {},
+      {
+        headers: {
+          authToken: process.env.MESSAGE_CENTRAL_AUTH_TOKEN,
+        },
+
+      }
+    );
+console.log(response,'res');
+
+    if (response.data.status === "VERIFIED") {
+      return res.status(200).json({
+        success: true,
+        message: "OTP verified successfully",
+        data: response.data,
+      });
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid OTP",
+        data: response.data,
+      });
     }
-
-    if (storedOtpData.otp !== otp) {
-      return res.status(400).json({ message: "Invalid OTP" });
-    }
-
-    if (Date.now() > storedOtpData.expiry) {
-      otpStore.delete(mobileNumber);
-      return res.status(400).json({ message: "OTP expired. Please request a new OTP." });
-    }
-
-    // Mark as verified
-    storedOtpData.verified = true;
-    otpStore.set(mobileNumber, storedOtpData);
-
-    res.status(200).json({ 
-      message: "OTP verified successfully. You can now create your shop.",
-      verified: true
+  } catch (error) {
+    console.error("❌ Error verifying OTP:", error.response?.data || error.message);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to verify OTP",
+      error: error.response?.data || error.message,
     });
-
-  } catch (err) {
-    console.error("Verify shop OTP error:", err);
-    res.status(500).json({ message: "Server error while verifying OTP" });
   }
 };
 
@@ -845,7 +828,6 @@ const AdminChangeShopBanStatus = async (req, res) => {
 
 module.exports = {
   createShop,
-  sendShopCreationOTP,
   verifyShopCreationOTP,
   sendSMS,
   getShops,
