@@ -326,7 +326,7 @@ const data = shopWiseMap.get(shop._id.toString());
           userName: user.name,
           orderTime: order.createdAt,
           fullDetails,
-          html:buildOrderHtml(fullDetails)
+          // html:buildOrderHtml(fullDetails)
         },
       });
 

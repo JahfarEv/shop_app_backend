@@ -8,12 +8,12 @@ const userModel = require("../models/user");
 const Notification = require("../models/notificationModel"); // ✅ Add this
 const admin = require("../config/admin");
 const Salesman = require("../models/Salesman.model");
-const CommissionSettings = require("../models/salesmanCommisionSettings")
-const axios = require("axios")
+const CommissionSettings = require("../models/salesmanCommisionSettings");
+const axios = require("axios");
 const Otp = require("../models/otpModel");
 const crypto = require("crypto");
 
-// ✅ Create Shop 
+// ✅ Create Shop
 
 // const createShop = async (req, res) => {
 //   try {
@@ -29,7 +29,7 @@ const crypto = require("crypto");
 //       email,
 //       mobileNumber,
 //       landlineNumber,
-//       agentCode, 
+//       agentCode,
 //     } = req.body;
 
 //     let imageUrl = null;
@@ -125,12 +125,6 @@ const crypto = require("crypto");
 //   }
 // };
 
-
-
-
-
-
-
 // const createShop = async (req, res) => {
 //   try {
 
@@ -156,7 +150,6 @@ const crypto = require("crypto");
 //       landlineNumber,
 //       agentCode,
 //     } = cleanBody;
-
 
 //      const existingShop = await Shop.findOne({ mobileNumber });
 //     if (existingShop) {
@@ -215,7 +208,6 @@ const crypto = require("crypto");
 //   await matchedSalesman.save();
 // }
 
-
 //     // 🔔 Send FCM Notification
 //     const users = await userModel.find({ fcmTokens: { $exists: true, $ne: [] } });
 //     const allTokens = users.flatMap((user) => user.fcmTokens);
@@ -268,13 +260,14 @@ const crypto = require("crypto");
 //   }
 // };
 
-
 const sendSMS = async (req, res) => {
   try {
     const { mobileNumber } = req.body;
 
     if (!mobileNumber) {
-      return res.status(400).json({ success: false, message: "Mobile number is required" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Mobile number is required" });
     }
 
     const url = `https://cpaas.messagecentral.com/verification/v3/send?countryCode=91&customerId=${process.env.MESSAGE_CENTRAL_CUSTOMER_ID}&flowType=SMS&mobileNumber=${mobileNumber}`;
@@ -295,7 +288,10 @@ const sendSMS = async (req, res) => {
       data: response.data,
     });
   } catch (error) {
-    console.error("❌ Error sending OTP:", error.response?.data || error.message);
+    console.error(
+      "❌ Error sending OTP:",
+      error.response?.data || error.message
+    );
     return res.status(500).json({
       success: false,
       message: "Failed to send OTP",
@@ -304,30 +300,29 @@ const sendSMS = async (req, res) => {
   }
 };
 
-// Helper to generate 6-digit OTP
-const generateOtp = () => {
-  return Math.floor(100000 + Math.random() * 900000).toString();
-};
-
 // Temporary OTP storage (you might want to use Redis in production)
 const otpStore = new Map();
 
 // Step 1: Send OTP for shop creation
 
-
 // Step 2: Verify OTP for shop creation
-const verifyShopCreationOTP =  async (req, res) => {
+const verifyShopCreationOTP = async (req, res) => {
   try {
     const { mobileNumber, otp } = req.body;
 
     if (!mobileNumber || !otp) {
-      return res.status(400).json({ success: false, message: "Mobile number and OTP are required" });
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "Mobile number and OTP are required",
+        });
     }
 
     const url = `https://cpaas.messagecentral.com/verification/v3/verify?countryCode=91&customerId=${process.env.MESSAGE_CENTRAL_CUSTOMER_ID}&flowType=SMS&mobileNumber=${mobileNumber}&otp=${otp}`;
-console.log(process.env.MESSAGE_CENTRAL_CUSTOMER_ID);
+    console.log(process.env.MESSAGE_CENTRAL_CUSTOMER_ID);
 
-console.log(process.env.MESSAGE_CENTRAL_AUTH_TOKEN,'kkk');
+    console.log(process.env.MESSAGE_CENTRAL_AUTH_TOKEN, "kkk");
     const response = await axios.post(
       url,
       {},
@@ -335,10 +330,9 @@ console.log(process.env.MESSAGE_CENTRAL_AUTH_TOKEN,'kkk');
         headers: {
           authToken: process.env.MESSAGE_CENTRAL_AUTH_TOKEN,
         },
-
       }
     );
-console.log(response,'res');
+    console.log(response, "res");
 
     if (response.data.status === "VERIFIED") {
       return res.status(200).json({
@@ -354,7 +348,10 @@ console.log(response,'res');
       });
     }
   } catch (error) {
-    console.error("❌ Error verifying OTP:", error.response?.data || error.message);
+    console.error(
+      "❌ Error verifying OTP:",
+      error.response?.data || error.message
+    );
     return res.status(500).json({
       success: false,
       message: "Failed to verify OTP",
@@ -392,12 +389,16 @@ const createShop = async (req, res) => {
 
     // ✅ Verify OTP before proceeding
     if (!otp) {
-      return res.status(400).json({ message: "OTP is required for shop creation" });
+      return res
+        .status(400)
+        .json({ message: "OTP is required for shop creation" });
     }
 
     const storedOtpData = otpStore.get(mobileNumber);
     if (!storedOtpData) {
-      return res.status(400).json({ message: "OTP not found. Please request a new OTP." });
+      return res
+        .status(400)
+        .json({ message: "OTP not found. Please request a new OTP." });
     }
 
     if (!storedOtpData.verified) {
@@ -410,7 +411,9 @@ const createShop = async (req, res) => {
 
     if (Date.now() > storedOtpData.expiry) {
       otpStore.delete(mobileNumber);
-      return res.status(400).json({ message: "OTP expired. Please request a new OTP." });
+      return res
+        .status(400)
+        .json({ message: "OTP expired. Please request a new OTP." });
     }
 
     // ✅ Double-check mobile number availability
@@ -476,7 +479,9 @@ const createShop = async (req, res) => {
     }
 
     // 🔔 Send FCM Notification
-    const users = await userModel.find({ fcmTokens: { $exists: true, $ne: [] } });
+    const users = await userModel.find({
+      fcmTokens: { $exists: true, $ne: [] },
+    });
     const allTokens = users.flatMap((user) => user.fcmTokens);
     let fcmResponse = null;
 
@@ -489,7 +494,9 @@ const createShop = async (req, res) => {
         tokens: allTokens,
       };
       fcmResponse = await admin.messaging().sendEachForMulticast(message);
-      info(`✅ FCM Notification Summary:\nTotal Sent: ${allTokens.length}\nSuccess Count: ${fcmResponse.successCount}\nFailure Count: ${fcmResponse.failureCount}`);
+      info(
+        `✅ FCM Notification Summary:\nTotal Sent: ${allTokens.length}\nSuccess Count: ${fcmResponse.successCount}\nFailure Count: ${fcmResponse.failureCount}`
+      );
     }
 
     // 💾 Save notification
@@ -526,7 +533,6 @@ const createShop = async (req, res) => {
         failureCount: fcmResponse?.failureCount || 0,
       },
     });
-
   } catch (err) {
     error("❌ Error in createShop:", err);
     res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
@@ -559,7 +565,6 @@ const getShops = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
-
 
 // ✅ admin pannel Get All Shops
 const AdminGetAllShops = async (req, res) => {
@@ -618,7 +623,9 @@ const getShopByUser = async (req, res) => {
       data: shops,
     });
   } catch (err) {
-    error(`Failed to fetch shops - UserID: ${req.user.id}, Error: ${err.message}`);
+    error(
+      `Failed to fetch shops - UserID: ${req.user.id}, Error: ${err.message}`
+    );
     const statusCode = err.statusCode || StatusCodes.INTERNAL_SERVER_ERROR;
     const message = err.message || "Internal Server Error";
     res.status(statusCode).json({ message });
@@ -629,17 +636,17 @@ const getShopByUser = async (req, res) => {
 const updateShop = async (req, res) => {
   try {
     const { id } = req.params;
-    const { 
-      shopName, 
-      category, 
-      sellerType, 
-      state, 
-      locality, 
-      place, 
+    const {
+      shopName,
+      category,
+      sellerType,
+      state,
+      locality,
+      place,
       pinCode,
       email,
       mobileNumber,
-      landlineNumber
+      landlineNumber,
     } = req.body;
 
     const shop = await Shop.findById(id);
@@ -668,14 +675,17 @@ const updateShop = async (req, res) => {
       updatedData.headerImage = result.secure_url;
     }
 
-    const updatedShop = await Shop.findByIdAndUpdate(id, updatedData, { new: true });
+    const updatedShop = await Shop.findByIdAndUpdate(id, updatedData, {
+      new: true,
+    });
 
-    res.status(200).json({ message: "Shop updated successfully", shop: updatedShop });
+    res
+      .status(200)
+      .json({ message: "Shop updated successfully", shop: updatedShop });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
-
 
 // ✅ Delete Shop by ID
 const deleteShop = async (req, res) => {
@@ -710,7 +720,9 @@ const getNearbyShops = async (req, res) => {
     });
 
     if (matchingShops.length === 0) {
-      return res.status(200).json({ message: "No shops found in your area", shops: [] });
+      return res
+        .status(200)
+        .json({ message: "No shops found in your area", shops: [] });
     }
 
     return res.status(200).json({ shops: matchingShops });
@@ -737,21 +749,22 @@ const searchShopController = async (req, res) => {
     }
 
     // 🔍 Case-insensitive search regex
-    const regex = new RegExp(term, 'i');
+    const regex = new RegExp(term, "i");
 
     // 🔎 Find all matching shops
     const shops = await Shop.find({
-       isBanned: false,                        
-      $or: [
-        { shopName: { $regex: regex } },
-        { category: { $in: [regex] } }
-      ]
+      isBanned: false,
+      $or: [{ shopName: { $regex: regex } }, { category: { $in: [regex] } }],
     });
 
     // ✅ Sort shops: those matching user's location (state & pincode) first
     const sortedShops = shops.sort((a, b) => {
-      const aMatch = a.state?.toLowerCase() === user.state.toLowerCase() && a.pinCode === user.pincode;
-      const bMatch = b.state?.toLowerCase() === user.state.toLowerCase() && b.pinCode === user.pincode;
+      const aMatch =
+        a.state?.toLowerCase() === user.state.toLowerCase() &&
+        a.pinCode === user.pincode;
+      const bMatch =
+        b.state?.toLowerCase() === user.state.toLowerCase() &&
+        b.pinCode === user.pincode;
 
       if (aMatch && !bMatch) return -1;
       if (!aMatch && bMatch) return 1;
@@ -763,20 +776,19 @@ const searchShopController = async (req, res) => {
     // Each a and b is a shop object being compared.
     // We define custom sorting by comparing how well each shop matches the user's location.
 
-//     2. if (aMatch && !bMatch) return -1;
-// Means: If Shop A matches and Shop B doesn't, then Shop A should come before B in the sorted list.
+    //     2. if (aMatch && !bMatch) return -1;
+    // Means: If Shop A matches and Shop B doesn't, then Shop A should come before B in the sorted list.
 
-//     3. if (!aMatch && bMatch) return 1;
-// Means: If Shop B matches and Shop A doesn't, then Shop B should come before A.
+    //     3. if (!aMatch && bMatch) return 1;
+    // Means: If Shop B matches and Shop A doesn't, then Shop B should come before A.
 
-//     4. return 0;
-// If both shops match or neither match, no change in their order.
+    //     4. return 0;
+    // If both shops match or neither match, no change in their order.
 
     res.status(StatusCodes.OK).json({
       message: `${sortedShops.length} shops found`,
       shops: sortedShops,
     });
-
   } catch (error) {
     res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
       message: "Error searching for shops",
@@ -790,7 +802,7 @@ const AdminsearchShopController = async (req, res) => {
   const { keyword } = req.params;
 
   try {
-    const regex = new RegExp(keyword, 'i'); // case-insensitive match
+    const regex = new RegExp(keyword, "i"); // case-insensitive match
     const shops = await Shop.find({
       $or: [
         { shopName: { $regex: regex } },
@@ -801,11 +813,10 @@ const AdminsearchShopController = async (req, res) => {
 
     res.status(200).json({ success: true, shops });
   } catch (error) {
-    console.error('Shop search error:', error);
-    res.status(500).json({ success: false, message: 'Search failed' });
+    console.error("Shop search error:", error);
+    res.status(500).json({ success: false, message: "Search failed" });
   }
 };
-
 
 // controller to change ban/active status of a shop from admin pannel
 const AdminChangeShopBanStatus = async (req, res) => {
@@ -818,13 +829,13 @@ const AdminChangeShopBanStatus = async (req, res) => {
     shop.isBanned = !shop.isBanned;
     await shop.save();
 
-    res.status(200).json({ message: "Shop ban status updated", isBanned: shop.isBanned });
+    res
+      .status(200)
+      .json({ message: "Shop ban status updated", isBanned: shop.isBanned });
   } catch (error) {
     res.status(500).json({ message: "Server error" });
   }
 };
-
-
 
 module.exports = {
   createShop,
@@ -839,6 +850,5 @@ module.exports = {
   getNearbyShops,
   searchShopController,
   AdminsearchShopController,
-  AdminChangeShopBanStatus
+  AdminChangeShopBanStatus,
 };
-
