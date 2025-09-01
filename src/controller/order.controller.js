@@ -311,17 +311,24 @@ const selectedAddress = addressDoc?.addresses?.id(addressId);
   // }
 
 
-
-  if (ownerTokens.length > 0) {
-  // Create item list string
+if (ownerTokens.length > 0) {
+  // Build item list with quantity + unit
   const itemsList = fullDetails.items
-    .map(i => `${i.name} x${i.quantity}`)
-    .join(", "); // you can also use '\n' for line breaks
+    .map(i => {
+      let unit = "";
+      if (i.weightInGrams) {
+        unit = `${i.weightInGrams}g`; // you can also convert to kg if > 1000
+      } else {
+        unit = "pcs"; // fallback unit
+      }
+      return `${i.name} x${i.quantity} (${unit})`;
+    })
+    .join(", "); // or use "\n" for multi-line
 
   const fcmMessage = {
     notification: {
       title: "🛒 New Order Received!",
-      body: `You have a new order from ${fullDetails.customer.name}. Total ₹${fullDetails.totalAmount}. Items: ${itemsList}`,
+      body: `New order from ${fullDetails.customer.name}. Total ₹${fullDetails.totalAmount}. Items: ${itemsList}`,
     },
     data: {
       orderId: order._id.toString(),
@@ -339,6 +346,7 @@ const selectedAddress = addressDoc?.addresses?.id(addressId);
     console.error("❌ Error sending FCM to shop owner:", err);
   }
 }
+
 
 }
 
