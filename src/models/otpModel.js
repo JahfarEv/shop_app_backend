@@ -1,9 +1,23 @@
+// models/OTPVerification.js
 const mongoose = require("mongoose");
 
-const otpSchema = new mongoose.Schema({
-  mobileNumber: { type: String, required: true },
-  code: { type: String, required: true },
-  createdAt: { type: Date, default: Date.now, expires: 300 } // expires in 5 mins
-});
+const otpVerificationSchema = new mongoose.Schema({
+  mobileNumber: {
+    type: String,
+    required: true,
+  },
+  verificationId: {
+    type: String,
+    required: true,
+  },
+  isVerified: {
+    type: Boolean,
+    default: false,
+  },
+  expiresAt: {
+    type: Date,
+    required: true,
+  },
+}, { timestamps: true });
 
-module.exports = mongoose.model("Otp", otpSchema);
+module.exports = mongoose.model("OTPVerification", otpVerificationSchema);

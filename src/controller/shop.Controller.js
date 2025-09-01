@@ -12,6 +12,7 @@ const CommissionSettings = require("../models/salesmanCommisionSettings");
 const axios = require("axios");
 const Otp = require("../models/otpModel");
 const crypto = require("crypto");
+const OTPVerification = require("../models/otpModel");
 
 // ✅ Create Shop
 
@@ -260,93 +261,508 @@ const crypto = require("crypto");
 //   }
 // };
 
-const sendSMS = async (req, res) => {
+// const sendSMS = async (req, res) => {
+//   try {
+//     const { mobileNumber } = req.body;
+
+//     if (!mobileNumber) {
+//       return res
+//         .status(400)
+//         .json({ success: false, message: "Mobile number is required" });
+//     }
+
+//     const url = `https://cpaas.messagecentral.com/verification/v3/send?countryCode=91&customerId=${process.env.MESSAGE_CENTRAL_CUSTOMER_ID}&flowType=SMS&mobileNumber=${mobileNumber}`;
+
+//     const response = await axios.post(
+//       url,
+//       {},
+//       {
+//         headers: {
+//           authToken: process.env.MESSAGE_CENTRAL_AUTH_TOKEN,
+//         },
+//       }
+//     );
+
+//     return res.status(200).json({
+//       success: true,
+//       message: "OTP sent successfully",
+//       data: response.data,
+//     });
+//   } catch (error) {
+//     console.error(
+//       "❌ Error sending OTP:",
+//       error.response?.data || error.message
+//     );
+//     return res.status(500).json({
+//       success: false,
+//       message: "Failed to send OTP",
+//       error: error.response?.data || error.message,
+//     });
+//   }
+// };
+
+// // Temporary OTP storage (you might want to use Redis in production)
+// const otpStore = new Map();
+
+// // Step 1: Send OTP for shop creation
+
+// // Step 2: Verify OTP for shop creation
+// const verifyShopCreationOTP = async (req, res) => {
+//   try {
+//     const { mobileNumber, otp } = req.body;
+
+//     if (!mobileNumber || !otp) {
+//       return res
+//         .status(400)
+//         .json({
+//           success: false,
+//           message: "Mobile number and OTP are required",
+//         });
+//     }
+
+//     const url = `https://cpaas.messagecentral.com/verification/v3/verify?countryCode=91&customerId=${process.env.MESSAGE_CENTRAL_CUSTOMER_ID}&flowType=SMS&mobileNumber=${mobileNumber}&otp=${otp}`;
+//     console.log(process.env.MESSAGE_CENTRAL_CUSTOMER_ID);
+
+//     console.log(process.env.MESSAGE_CENTRAL_AUTH_TOKEN, "kkk");
+//     const response = await axios.post(
+//       url,
+//       {},
+//       {
+//         headers: {
+//           authToken: process.env.MESSAGE_CENTRAL_AUTH_TOKEN,
+//         },
+//       }
+//     );
+//     console.log(response, "res");
+
+//     if (response.data.status === "VERIFIED") {
+//       return res.status(200).json({
+//         success: true,
+//         message: "OTP verified successfully",
+//         data: response.data,
+//       });
+//     } else {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Invalid OTP",
+//         data: response.data,
+//       });
+//     }
+//   } catch (error) {
+//     console.error(
+//       "❌ Error verifying OTP:",
+//       error.response?.data || error.message
+//     );
+//     return res.status(500).json({
+//       success: false,
+//       message: "Failed to verify OTP",
+//       error: error.response?.data || error.message,
+//     });
+//   }
+// };
+
+// // Step 3: Modified createShop function with OTP verification
+// const createShop = async (req, res) => {
+//   try {
+//     const cleanBody = {};
+//     for (let key in req.body) {
+//       const cleanKey = key.trim();
+//       cleanBody[cleanKey] = req.body[key];
+//     }
+
+//     console.log("📥 Cleaned Request Body:", cleanBody);
+
+//     const {
+//       shopName,
+//       category,
+//       sellerType,
+//       state,
+//       locality,
+//       place,
+//       pinCode,
+//       userId,
+//       email,
+//       mobileNumber,
+//       landlineNumber,
+//       agentCode,
+//       otp, // Add OTP to the request body
+//     } = cleanBody;
+
+//     // ✅ Verify OTP before proceeding
+//     if (!otp) {
+//       return res
+//         .status(400)
+//         .json({ message: "OTP is required for shop creation" });
+//     }
+
+//     const storedOtpData = otpStore.get(mobileNumber);
+//     if (!storedOtpData) {
+//       return res
+//         .status(400)
+//         .json({ message: "OTP not found. Please request a new OTP." });
+//     }
+
+//     if (!storedOtpData.verified) {
+//       return res.status(400).json({ message: "Please verify your OTP first" });
+//     }
+
+//     if (storedOtpData.otp !== otp) {
+//       return res.status(400).json({ message: "Invalid OTP" });
+//     }
+
+//     if (Date.now() > storedOtpData.expiry) {
+//       otpStore.delete(mobileNumber);
+//       return res
+//         .status(400)
+//         .json({ message: "OTP expired. Please request a new OTP." });
+//     }
+
+//     // ✅ Double-check mobile number availability
+//     const existingShop = await Shop.findOne({ mobileNumber });
+//     if (existingShop) {
+//       return res.status(StatusCodes.CONFLICT).json({
+//         message: "Mobile number already registered with another shop",
+//       });
+//     }
+
+//     let imageUrl = null;
+//     if (req.file) {
+//       const result = await cloudinary.v2.uploader.upload(req.file.path, {
+//         folder: "shops",
+//       });
+//       imageUrl = result.secure_url;
+//       fs.unlinkSync(req.file.path);
+//     }
+
+//     // ✅ Check if agent code matches any Salesman
+//     let matchedSalesman = null;
+//     if (agentCode) {
+//       matchedSalesman = await Salesman.findOne({ agentCode: agentCode });
+//     }
+
+//     // ✅ Create shop
+//     const newShop = new Shop({
+//       shopName,
+//       category: Array.isArray(category) ? category : [category],
+//       sellerType,
+//       state,
+//       locality,
+//       place,
+//       pinCode,
+//       headerImage: imageUrl,
+//       owner: userId,
+//       email,
+//       mobileNumber,
+//       landlineNumber,
+//       agentCode,
+//       registeredBySalesman: matchedSalesman ? matchedSalesman._id : null,
+//       isVerified: true, // Mark as verified since OTP was successful
+//     });
+
+//     await newShop.save();
+
+//     // ✅ Clear OTP after successful shop creation
+//     otpStore.delete(mobileNumber);
+
+//     if (matchedSalesman) {
+//       matchedSalesman.shopsAddedBySalesman.push(newShop._id);
+//       // ✅ Fetch current commission amount from settings
+//       const settings = await CommissionSettings.findOne();
+//       const commission = settings?.salesCommission || 0;
+
+//       // ✅ Push new entry into salesCommissionEarned
+//       matchedSalesman.salesCommissionEarned.push({
+//         shop: newShop._id,
+//         amount: commission,
+//       });
+
+//       await matchedSalesman.save();
+//     }
+
+//     // 🔔 Send FCM Notification
+//     const users = await userModel.find({
+//       fcmTokens: { $exists: true, $ne: [] },
+//     });
+//     const allTokens = users.flatMap((user) => user.fcmTokens);
+//     let fcmResponse = null;
+
+//     if (allTokens.length > 0) {
+//       const message = {
+//         notification: {
+//           title: "🛍️ New Shop Alert!",
+//           body: `Check out new shop "${shopName}". Explore now!`,
+//         },
+//         tokens: allTokens,
+//       };
+//       fcmResponse = await admin.messaging().sendEachForMulticast(message);
+//       info(
+//         `✅ FCM Notification Summary:\nTotal Sent: ${allTokens.length}\nSuccess Count: ${fcmResponse.successCount}\nFailure Count: ${fcmResponse.failureCount}`
+//       );
+//     }
+
+//     // 💾 Save notification
+//     const notificationDoc = new Notification({
+//       title: "🛍️ New Shop Alert!",
+//       body: `Check out new shop "${shopName}". Explore now!`,
+//       type: "new_shop",
+//       recipients: users.map((user) => ({
+//         userId: user._id,
+//         isRead: false,
+//       })),
+//       data: {
+//         shopId: newShop._id,
+//         shopName: shopName,
+//       },
+//     });
+
+//     await notificationDoc.save();
+
+//     // 📱 Send confirmation SMS to shop owner
+//     const confirmationMessage = `Congratulations! Your shop "${shopName}" has been successfully registered. Shop ID: ${newShop._id}`;
+//     try {
+//       await sendSMS(mobileNumber, confirmationMessage);
+//     } catch (smsError) {
+//       console.error("Failed to send confirmation SMS:", smsError);
+//       // Don't fail the entire operation if SMS fails
+//     }
+
+//     res.status(StatusCodes.CREATED).json({
+//       message: "Shop created successfully with OTP verification",
+//       shop: newShop,
+//       fcm: {
+//         successCount: fcmResponse?.successCount || 0,
+//         failureCount: fcmResponse?.failureCount || 0,
+//       },
+//     });
+//   } catch (err) {
+//     error("❌ Error in createShop:", err);
+//     res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+//       message: err.message || "Server error",
+//       error: err,
+//     });
+//   }
+// };
+
+// // Optional: Clean up expired OTPs periodically
+// const cleanupExpiredOTPs = () => {
+//   const now = Date.now();
+//   for (const [mobileNumber, otpData] of otpStore.entries()) {
+//     if (now > otpData.expiry) {
+//       otpStore.delete(mobileNumber);
+//     }
+//   }
+// };
+
+// // Run cleanup every 5 minutes
+// setInterval(cleanupExpiredOTPs, 5 * 60 * 1000);
+
+
+
+// / Temporary store for verified numbers (you can use Redis/DB in production)
+  const verifiedNumbers = new Set();
+  console.log(verifiedNumbers,'number');
+
+  /**
+   * =====================================================================
+   * STEP 1: SEND OTP
+   * =====================================================================
+   */
+  // const sendShopOtp = async (req, res) => {
+  //   try {
+  //     const { mobileNumber } = req.body;
+
+  //     if (!mobileNumber) {
+  //       return res.status(400).json({
+  //         success: false,
+  //         message: "Mobile number is required",
+  //       });
+  //     }
+
+  //     const url = `https://cpaas.messagecentral.com/verification/v3/send?countryCode=91&customerId=${process.env.MESSAGE_CENTRAL_CUSTOMER_ID}&flowType=SMS&mobileNumber=${mobileNumber}`;
+
+  //     const response = await axios.post(url, {}, {
+  //       headers: {
+  //         authToken: process.env.MESSAGE_CENTRAL_AUTH_TOKEN,
+  //       },
+  //     });
+
+  //     // IMPORTANT: response contains verificationId
+  //     return res.status(200).json({
+  //       success: true,
+  //       message: "OTP sent successfully",
+  //       data: response.data, // contains verificationId
+  //     });
+  //   } catch (error) {
+  //     console.error("❌ Error sending OTP:", error.response?.data || error.message);
+  //     return res.status(500).json({
+  //       success: false,
+  //       message: "Failed to send OTP",
+  //       error: error.response?.data || error.message,
+  //     });
+  //   }
+  // };
+
+const sendShopOtp = async (req, res) => {
   try {
     const { mobileNumber } = req.body;
 
     if (!mobileNumber) {
       return res
         .status(400)
-        .json({ success: false, message: "Mobile number is required" });
+        .json({ success: false, message: "mobileNumber is required" });
     }
 
     const url = `https://cpaas.messagecentral.com/verification/v3/send?countryCode=91&customerId=${process.env.MESSAGE_CENTRAL_CUSTOMER_ID}&flowType=SMS&mobileNumber=${mobileNumber}`;
 
-    const response = await axios.post(
-      url,
-      {},
-      {
-        headers: {
-          authToken: process.env.MESSAGE_CENTRAL_AUTH_TOKEN,
-        },
-      }
-    );
+    const response = await axios.post(url, {}, {
+      headers: {
+        authToken: process.env.MESSAGE_CENTRAL_AUTH_TOKEN,
+      },
+    });
+
+    const responseData = response.data;
+    console.log("📩 Provider Response:", responseData);
+
+    // ✅ Correct path: responseData.data.verificationId
+    const verificationId = responseData?.data?.verificationId;
+
+    if (!verificationId) {
+      return res.status(500).json({
+        success: false,
+        message: "Failed to get verificationId from provider",
+        data: responseData,
+      });
+    }
+
+    // ✅ Save in MongoDB
+    await OTPVerification.create({
+      mobileNumber,
+      verificationId,
+      isVerified: false,
+      expiresAt: new Date(Date.now() + 5 * 60 * 1000), // 5 min expiry
+    });
 
     return res.status(200).json({
       success: true,
       message: "OTP sent successfully",
-      data: response.data,
+      verificationId,
     });
+
   } catch (error) {
-    console.error(
-      "❌ Error sending OTP:",
-      error.response?.data || error.message
-    );
+    console.error("❌ Error sending OTP:", error.message);
     return res.status(500).json({
       success: false,
-      message: "Failed to send OTP",
-      error: error.response?.data || error.message,
+      message: "Internal server error",
+      error: error.message,
     });
   }
 };
 
-// Temporary OTP storage (you might want to use Redis in production)
-const otpStore = new Map();
+  /**
+   * STEP 2: Verify OTP
+   */
+  // const verifyShopOtp = async (req, res) => {
+  //   try {
+  //     const { mobileNumber, otp, verificationId } = req.body;
 
-// Step 1: Send OTP for shop creation
+  //     if (!mobileNumber || !otp || !verificationId) {
+  //       return res.status(400).json({
+  //         success: false,
+  //         message: "mobileNumber, otp and verificationId are required",
+  //       });
+  //     }
 
-// Step 2: Verify OTP for shop creation
-const verifyShopCreationOTP = async (req, res) => {
+  //     const url = `https://cpaas.messagecentral.com/verification/v3/validateOtp?countryCode=91&mobileNumber=${mobileNumber}&verificationId=${verificationId}&customerId=${process.env.MESSAGE_CENTRAL_CUSTOMER_ID}&code=${otp}`;
+
+  //     const response = await axios.get(url, {
+  //       headers: {
+  //         authToken: process.env.MESSAGE_CENTRAL_AUTH_TOKEN,
+  //       },
+  //     });
+
+  //     return res.status(200).json({
+  //       success: true,
+  //       message: "OTP verified successfully",
+  //       data: response.data,
+  //     });
+  //   } catch (error) {
+  //     console.error("❌ Error verifying OTP:", error.response?.data || error.message);
+  //     return res.status(500).json({
+  //       success: false,
+  //       message: "Failed to verify OTP",
+  //       error: error.response?.data || error.message,
+  //     });
+  //   }
+  // };
+
+const verifyShopOtp = async (req, res) => {
   try {
-    const { mobileNumber, otp } = req.body;
+    const { mobileNumber, otp, verificationId } = req.body;
+    console.log(mobileNumber, otp, verificationId);
 
-    if (!mobileNumber || !otp) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "Mobile number and OTP are required",
-        });
+    if (!mobileNumber || !otp || !verificationId) {
+      return res.status(400).json({
+        success: false,
+        message: "Mobile number, OTP and verificationId are required",
+      });
     }
 
-    const url = `https://cpaas.messagecentral.com/verification/v3/verify?countryCode=91&customerId=${process.env.MESSAGE_CENTRAL_CUSTOMER_ID}&flowType=SMS&mobileNumber=${mobileNumber}&otp=${otp}`;
-    console.log(process.env.MESSAGE_CENTRAL_CUSTOMER_ID);
-
-    console.log(process.env.MESSAGE_CENTRAL_AUTH_TOKEN, "kkk");
-    const response = await axios.post(
-      url,
-      {},
+    // 🔍 Call MessageCentral API with GET
+    const response = await axios.get(
+      "https://cpaas.messagecentral.com/verification/v3/validateOtp",
       {
+        params: {
+          countryCode: "91",
+          mobileNumber,
+          verificationId,
+          customerId: process.env.MESSAGE_CENTRAL_CUSTOMER_ID,
+          code: otp,
+        },
         headers: {
           authToken: process.env.MESSAGE_CENTRAL_AUTH_TOKEN,
         },
       }
     );
-    console.log(response, "res");
 
-    if (response.data.status === "VERIFIED") {
+    console.log("✅ OTP Provider Response:", response.data);
+
+    const providerData = response.data?.data;
+
+    if (
+      response.data?.responseCode === 200 &&
+      providerData?.verificationStatus === "VERIFICATION_COMPLETED"
+    ) {
+      // ✅ Mark in DB
+      let otpRecord = await OTPVerification.findOne({ mobileNumber });
+
+      if (otpRecord) {
+        otpRecord.isVerified = true;
+        otpRecord.verificationId = verificationId;
+        otpRecord.expiresAt = new Date(Date.now() + 5 * 60 * 1000);
+        await otpRecord.save();
+      } else {
+        otpRecord = await OTPVerification.create({
+          mobileNumber,
+          verificationId,
+          isVerified: true,
+          expiresAt: new Date(Date.now() + 5 * 60 * 1000),
+        });
+      }
+
       return res.status(200).json({
         success: true,
         message: "OTP verified successfully",
-        data: response.data,
-      });
-    } else {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid OTP",
-        data: response.data,
+        data: otpRecord,
+        providerResponse: response.data,
       });
     }
+
+    // ❌ If failed
+    return res.status(401).json({
+      success: false,
+      message: "Invalid or expired OTP",
+      providerResponse: response.data,
+    });
   } catch (error) {
     console.error(
       "❌ Error verifying OTP:",
@@ -360,7 +776,161 @@ const verifyShopCreationOTP = async (req, res) => {
   }
 };
 
-// Step 3: Modified createShop function with OTP verification
+
+  /**
+   * =====================================================================
+   * STEP 3: CREATE SHOP (only if OTP verified)
+   * =====================================================================
+   */
+//   const createShop = async (req, res) => {
+//     try {
+//       const cleanBody = {};
+//       for (let key in req.body) {
+//         const cleanKey = key.trim();
+//         cleanBody[cleanKey] = req.body[key];
+//       }
+
+//       const {
+//         shopName,
+//         category,
+//         sellerType,
+//         state,
+//         locality,
+//         place,
+//         pinCode,
+//         userId,
+//         email,
+//         mobileNumber,
+//         landlineNumber,
+//         agentCode,
+//       } = cleanBody;
+
+//       // ✅ Ensure OTP verified
+//       if (!verifiedNumbers.has(mobileNumber)) {
+//         return res.status(StatusCodes.BAD_REQUEST).json({
+//           success: false,
+//           message: "Please verify OTP before creating shop",
+//         });
+//       }
+// console.log(verifiedNumbers,'numbers');
+
+//       // ✅ Check duplicate mobile
+//       const existingShop = await Shop.findOne({ mobileNumber });
+//       if (existingShop) {
+//         return res.status(StatusCodes.CONFLICT).json({
+//           success: false,
+//           message: "Mobile number already registered with another shop",
+//         });
+//       }
+
+//       // ✅ Upload image if provided
+//       let imageUrl = null;
+//       if (req.file) {
+//         const result = await cloudinary.v2.uploader.upload(req.file.path, {
+//           folder: "shops",
+//         });
+//         imageUrl = result.secure_url;
+//         fs.unlinkSync(req.file.path);
+//       }
+
+//       // ✅ Check if agent code belongs to salesman
+//       let matchedSalesman = null;
+//       if (agentCode) {
+//         matchedSalesman = await Salesman.findOne({ agentCode });
+//       }
+
+//       // ✅ Create new shop
+//       const newShop = new Shop({
+//         shopName,
+//         category: Array.isArray(category) ? category : [category],
+//         sellerType,
+//         state,
+//         locality,
+//         place,
+//         pinCode,
+//         headerImage: imageUrl,
+//         owner: userId,
+//         email,
+//         mobileNumber,
+//         landlineNumber,
+//         agentCode,
+//         registeredBySalesman: matchedSalesman ? matchedSalesman._id : null,
+//         isVerified: true,
+//       });
+
+//       await newShop.save();
+
+//       // ✅ Clear OTP verification after success
+//       verifiedNumbers.delete(mobileNumber);
+
+//       // ✅ If salesman exists, add commission
+//       if (matchedSalesman) {
+//         matchedSalesman.shopsAddedBySalesman.push(newShop._id);
+
+//         const settings = await CommissionSettings.findOne();
+//         const commission = settings?.salesCommission || 0;
+
+//         matchedSalesman.salesCommissionEarned.push({
+//           shop: newShop._id,
+//           amount: commission,
+//         });
+
+//         await matchedSalesman.save();
+//       }
+
+//       // 🔔 Send FCM Notification
+//       const users = await userModel.find({ fcmTokens: { $exists: true, $ne: [] } });
+//       const allTokens = users.flatMap((user) => user.fcmTokens);
+//       let fcmResponse = null;
+
+//       if (allTokens.length > 0) {
+//         const message = {
+//           notification: {
+//             title: "🛍️ New Shop Alert!",
+//             body: `Check out new shop "${shopName}". Explore now!`,
+//           },
+//           tokens: allTokens,
+//         };
+//         fcmResponse = await admin.messaging().sendEachForMulticast(message);
+//       }
+
+//       // 💾 Save notification
+//       const notificationDoc = new Notification({
+//         title: "🛍️ New Shop Alert!",
+//         body: `Check out new shop "${shopName}". Explore now!`,
+//         type: "new_shop",
+//         recipients: users.map((user) => ({
+//           userId: user._id,
+//           isRead: false,
+//         })),
+//         data: {
+//           shopId: newShop._id,
+//           shopName: shopName,
+//         },
+//       });
+
+//       await notificationDoc.save();
+
+//       res.status(StatusCodes.CREATED).json({
+//         success: true,
+//         message: "Shop created successfully with OTP verification",
+//         shop: newShop,
+//         fcm: {
+//           successCount: fcmResponse?.successCount || 0,
+//           failureCount: fcmResponse?.failureCount || 0,
+//         },
+//       });
+//     } catch (error) {
+//       console.error("❌ Error in createShop:", error);
+//       res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+//         success: false,
+//         message: error.message || "Server error",
+//         error,
+//       });
+//     }
+//   };
+
+
 const createShop = async (req, res) => {
   try {
     const cleanBody = {};
@@ -368,8 +938,6 @@ const createShop = async (req, res) => {
       const cleanKey = key.trim();
       cleanBody[cleanKey] = req.body[key];
     }
-
-    console.log("📥 Cleaned Request Body:", cleanBody);
 
     const {
       shopName,
@@ -384,46 +952,32 @@ const createShop = async (req, res) => {
       mobileNumber,
       landlineNumber,
       agentCode,
-      otp, // Add OTP to the request body
     } = cleanBody;
 
-    // ✅ Verify OTP before proceeding
-    if (!otp) {
-      return res
-        .status(400)
-        .json({ message: "OTP is required for shop creation" });
+    // ✅ Ensure OTP verified from DB
+    const otpRecord = await OTPVerification.findOne({
+      mobileNumber,
+      isVerified: true,
+      expiresAt: { $gt: new Date() }, // must not be expired
+    });
+
+    if (!otpRecord) {
+      return res.status(StatusCodes.BAD_REQUEST).json({
+        success: false,
+        message: "Please verify OTP before creating shop",
+      });
     }
 
-    const storedOtpData = otpStore.get(mobileNumber);
-    if (!storedOtpData) {
-      return res
-        .status(400)
-        .json({ message: "OTP not found. Please request a new OTP." });
-    }
-
-    if (!storedOtpData.verified) {
-      return res.status(400).json({ message: "Please verify your OTP first" });
-    }
-
-    if (storedOtpData.otp !== otp) {
-      return res.status(400).json({ message: "Invalid OTP" });
-    }
-
-    if (Date.now() > storedOtpData.expiry) {
-      otpStore.delete(mobileNumber);
-      return res
-        .status(400)
-        .json({ message: "OTP expired. Please request a new OTP." });
-    }
-
-    // ✅ Double-check mobile number availability
+    // ✅ Check duplicate mobile
     const existingShop = await Shop.findOne({ mobileNumber });
     if (existingShop) {
       return res.status(StatusCodes.CONFLICT).json({
+        success: false,
         message: "Mobile number already registered with another shop",
       });
     }
 
+    // ✅ Upload image if provided
     let imageUrl = null;
     if (req.file) {
       const result = await cloudinary.v2.uploader.upload(req.file.path, {
@@ -433,13 +987,13 @@ const createShop = async (req, res) => {
       fs.unlinkSync(req.file.path);
     }
 
-    // ✅ Check if agent code matches any Salesman
+    // ✅ Check if agent code belongs to salesman
     let matchedSalesman = null;
     if (agentCode) {
-      matchedSalesman = await Salesman.findOne({ agentCode: agentCode });
+      matchedSalesman = await Salesman.findOne({ agentCode });
     }
 
-    // ✅ Create shop
+    // ✅ Create new shop
     const newShop = new Shop({
       shopName,
       category: Array.isArray(category) ? category : [category],
@@ -455,21 +1009,21 @@ const createShop = async (req, res) => {
       landlineNumber,
       agentCode,
       registeredBySalesman: matchedSalesman ? matchedSalesman._id : null,
-      isVerified: true, // Mark as verified since OTP was successful
+      isVerified: true,
     });
 
     await newShop.save();
 
-    // ✅ Clear OTP after successful shop creation
-    otpStore.delete(mobileNumber);
+    // ✅ Remove OTP record after success (so cannot reuse)
+    await OTPVerification.deleteOne({ _id: otpRecord._id });
 
+    // ✅ If salesman exists, add commission
     if (matchedSalesman) {
       matchedSalesman.shopsAddedBySalesman.push(newShop._id);
-      // ✅ Fetch current commission amount from settings
+
       const settings = await CommissionSettings.findOne();
       const commission = settings?.salesCommission || 0;
 
-      // ✅ Push new entry into salesCommissionEarned
       matchedSalesman.salesCommissionEarned.push({
         shop: newShop._id,
         amount: commission,
@@ -479,9 +1033,7 @@ const createShop = async (req, res) => {
     }
 
     // 🔔 Send FCM Notification
-    const users = await userModel.find({
-      fcmTokens: { $exists: true, $ne: [] },
-    });
+    const users = await userModel.find({ fcmTokens: { $exists: true, $ne: [] } });
     const allTokens = users.flatMap((user) => user.fcmTokens);
     let fcmResponse = null;
 
@@ -494,9 +1046,6 @@ const createShop = async (req, res) => {
         tokens: allTokens,
       };
       fcmResponse = await admin.messaging().sendEachForMulticast(message);
-      info(
-        `✅ FCM Notification Summary:\nTotal Sent: ${allTokens.length}\nSuccess Count: ${fcmResponse.successCount}\nFailure Count: ${fcmResponse.failureCount}`
-      );
     }
 
     // 💾 Save notification
@@ -516,16 +1065,8 @@ const createShop = async (req, res) => {
 
     await notificationDoc.save();
 
-    // 📱 Send confirmation SMS to shop owner
-    const confirmationMessage = `Congratulations! Your shop "${shopName}" has been successfully registered. Shop ID: ${newShop._id}`;
-    try {
-      await sendSMS(mobileNumber, confirmationMessage);
-    } catch (smsError) {
-      console.error("Failed to send confirmation SMS:", smsError);
-      // Don't fail the entire operation if SMS fails
-    }
-
     res.status(StatusCodes.CREATED).json({
+      success: true,
       message: "Shop created successfully with OTP verification",
       shop: newShop,
       fcm: {
@@ -533,27 +1074,15 @@ const createShop = async (req, res) => {
         failureCount: fcmResponse?.failureCount || 0,
       },
     });
-  } catch (err) {
-    error("❌ Error in createShop:", err);
+  } catch (error) {
+    console.error("❌ Error in createShop:", error);
     res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
-      message: err.message || "Server error",
-      error: err,
+      success: false,
+      message: error.message || "Server error",
+      error,
     });
   }
 };
-
-// Optional: Clean up expired OTPs periodically
-const cleanupExpiredOTPs = () => {
-  const now = Date.now();
-  for (const [mobileNumber, otpData] of otpStore.entries()) {
-    if (now > otpData.expiry) {
-      otpStore.delete(mobileNumber);
-    }
-  }
-};
-
-// Run cleanup every 5 minutes
-setInterval(cleanupExpiredOTPs, 5 * 60 * 1000);
 
 // get all shops for user module not for admin pannel
 
@@ -838,9 +1367,9 @@ const AdminChangeShopBanStatus = async (req, res) => {
 };
 
 module.exports = {
+sendShopOtp,
+  verifyShopOtp,
   createShop,
-  verifyShopCreationOTP,
-  sendSMS,
   getShops,
   AdminGetAllShops,
   getShopById,

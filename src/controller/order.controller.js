@@ -43,8 +43,7 @@ const placeOrderController = async (req, res) => {
     console.log(addressDoc,'add');
     
 const selectedAddress = addressDoc?.addresses?.id(addressId);
-console.log('Looking for addressId:', addressId);
-console.log('Available addresses:', addressDoc?.addresses?.map(a => a._id.toString()));
+
 
     if (!selectedAddress) {
       return res.status(404).json({ message: "Address not found" });
@@ -228,56 +227,7 @@ console.log('Available addresses:', addressDoc?.addresses?.map(a => a._id.toStri
     const uniqueShopIds = [...new Set(populatedItems.map(i => i.shop._id.toString()))];
     const shops = await Shop.find({ _id: { $in: uniqueShopIds } });
 
-     function buildOrderHtml(fullDetails) {
-      return `
-        <div style="font-family: Arial, sans-serif; padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
-          <h2 style="color:#2c3e50;">🛒 New Order from ${fullDetails.customer.name}</h2>
-          <h3>👤 Customer Details</h3>
-          <p><strong>Name:</strong> ${fullDetails.customer.name}<br/>
-             <strong>Email:</strong> ${fullDetails.customer.email}<br/>
-             <strong>Phone:</strong> ${fullDetails.customer.phone}</p>
-          
-          <h3>📍 Delivery Address</h3>
-          <p>
-            ${fullDetails.address.houseNo}, ${fullDetails.address.area},<br/>
-            ${fullDetails.address.town}, ${fullDetails.address.state},<br/>
-            ${fullDetails.address.country} - ${fullDetails.address.pincode}<br/>
-            Landmark: ${fullDetails.address.landmark}
-          </p>
-
-          <h3>🧾 Items</h3>
-          <table border="1" cellspacing="0" cellpadding="8" style="border-collapse: collapse; width: 100%;">
-            <thead style="background: #f4f4f4;">
-              <tr>
-                <th>Name</th><th>Qty</th><th>Price</th><th>Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${fullDetails.items
-                .map(
-                  (i) => `
-                <tr>
-                  <td>${i.name}</td>
-                  <td>${i.quantity}${
-                    i.weightInGrams ? ` (${i.weightInGrams}g)` : ""
-                  }</td>
-                  <td>₹${i.price}</td>
-                  <td>₹${i.priceWithQuantity}</td>
-                </tr>
-              `
-                )
-                .join("")}
-            </tbody>
-          </table>
-
-          <h3 style="margin-top:10px;">💰 Total: ₹${fullDetails.totalAmount}</h3>
-          <p><small>🕒 Ordered At: ${new Date(
-            fullDetails.orderTime
-          ).toLocaleString()}</small></p>
-        </div>
-      `;
-    }
-
+   
 
     for (let shop of shops) {
 
@@ -333,7 +283,37 @@ const data = shopWiseMap.get(shop._id.toString());
       await notificationDoc.save();
     }
 
+const shopOwner = await userModel.findById(Shop.owner);
+  const ownerTokens = shopOwner?.fcmTokens || [];
 
+  if (ownerTokens.length > 0) {
+    const fcmMessage = {
+      notification: {
+        title: "🛒 New Order Received!",
+        body: `You have a new order from ${user.name}. Total ₹${fullDetails.totalAmount}`,
+      },
+      tokens: ownerTokens,
+      data: {
+        orderId: order._id.toString(),
+        shopId: Shop._id.toString(),
+      },
+    };
+
+    try {
+      const fcmResponse = await admin.messaging().sendEachForMulticast(fcmMessage);
+      console.log(
+        `✅ FCM Sent to ${Shop.shopName}: Success=${fcmResponse.successCount}, Failures=${fcmResponse.failureCount}`
+      );
+    } catch (err) {
+      console.error("❌ Error sending FCM to shop owner:", err);
+    }
+  }
+    res.status(200).json({ message: "Order placed successfully", order });
+  } catch (err) {
+    console.error("Order error:", err.message);
+    res.status(500).json({ message: "Failed to place order", error: err.message });
+  }
+};
 
 //     for (let [shopId, data] of shopWiseMap.entries()) {
 //   const shop = data.shop;
@@ -392,12 +372,12 @@ const data = shopWiseMap.get(shop._id.toString());
     // =============================================================================================
     // ✅ RESPONSE
     // =============================================================================================
-    res.status(200).json({ message: "Order placed successfully", order });
-  } catch (err) {
-    console.error("Order error:", err.message);
-    res.status(500).json({ message: "Failed to place order", error: err.message });
-  }
-};
+//     res.status(200).json({ message: "Order placed successfully", order });
+//   } catch (err) {
+//     console.error("Order error:", err.message);
+//     res.status(500).json({ message: "Failed to place order", error: err.message });
+//   }
+// };
 
 
 // get api for the order summary | about the orders user has given and when he will click on them we will send the product details from another api..
