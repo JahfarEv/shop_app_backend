@@ -16,6 +16,7 @@ const {handleCreateAdvertisement} = require("../controller/adminAuth.controller"
 const {handleGetAdvertisements} = require("../controller/adminAuth.controller");
 const {unapprovedSalesmen} = require("../controller/adminAuth.controller")
 const {getAllMarketingManagers} = require("../controller/adminAuth.controller")
+const {getAllSalesman} = require('../controller/adminAuth.controller')
 const upload = require("../middleware/multer");
 
 // users api route of admin pannel -
@@ -65,6 +66,8 @@ router.patch('/approve/manager/:managerId', approveManager);
 router.patch('/approve/salesman/:salesmanId', approveSalesman);
 
 router.get('/managers', getAllMarketingManagers)
+router.get('/salesman', getAllSalesman)
+
 
 router.put('/commission/salesman', setSalesmanCommission);
 router.put('/commission/manager', setManagerCommission);

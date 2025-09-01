@@ -7,6 +7,7 @@ const MarketingManager = require("../models/MarketingManager.model");
 const SalesmanCommissionSettings = require("../models/salesmanCommisionSettings");
 const ManagerCommisionSettings = require("../models/managerCommisionSettings");
 const Advertisement = require("../models/Advertisement");
+const SalesmanModel = require("../models/Salesman.model");
 
 const handleAdminRegister = async (req, res) => {
   try {
@@ -203,6 +204,28 @@ const getAllMarketingManagers = async (req, res) => {
   try {
     const managers = await MarketingManager.find()
       .populate("assignedSalesmen", "name mobileNumber email") // ✅ optional populate salesmen
+      .sort({ createdAt: -1 }); // latest first
+
+    return res.status(200).json({
+      success: true,
+      message: "All Marketing Managers fetched successfully",
+      data: managers,
+    });
+  } catch (error) {
+    console.error("❌ Error fetching managers:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Error fetching marketing managers",
+      error: error.message,
+    });
+  }
+};
+
+
+const getAllSalesman = async (req, res) => {
+  try {
+    const managers = await SalesmanModel.find()
+      .populate("manager", "name") // ✅ optional populate salesmen
       .sort({ createdAt: -1 }); // latest first
 
     return res.status(200).json({
@@ -448,5 +471,6 @@ module.exports = {
   handleCreateAdvertisement,
   handleGetAdvertisements,
   unapprovedSalesmen,
-  getAllMarketingManagers
+  getAllMarketingManagers,
+  getAllSalesman
 };
