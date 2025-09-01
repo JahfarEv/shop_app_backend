@@ -707,16 +707,16 @@ const verifyShopOtp = async (req, res) => {
       });
     }
 
-    // 🔍 Call MessageCentral API with GET
+    // 🔍 Call MessageCentral API with GET (as per provider docs)
     const response = await axios.get(
-      "https://cpaas.messagecentral.com/verification/v3/validateOtp",
+      `https://cpaas.messagecentral.com/verification/v3/validateOtp`,
       {
         params: {
           countryCode: "91",
           mobileNumber,
           verificationId,
           customerId: process.env.MESSAGE_CENTRAL_CUSTOMER_ID,
-          code: otp,
+          code: otp, // ✅ provider expects "code"
         },
         headers: {
           authToken: process.env.MESSAGE_CENTRAL_AUTH_TOKEN,
@@ -726,6 +726,8 @@ const verifyShopOtp = async (req, res) => {
 
     console.log("✅ OTP Provider Response:", response.data);
 
+    // ✅ Accept verification based on provider structure
+  
     const providerData = response.data?.data;
 
     if (

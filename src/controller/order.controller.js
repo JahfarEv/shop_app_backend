@@ -5,7 +5,8 @@ const Product = require("../models/product");
 const DeliveryAddress = require("../models/deliveryAddressmodel");
 const Notification = require("../models/notificationModel");
 const nodemailer = require("nodemailer");
-const userModel = require("../models/user");
+const admin = require("../config/admin");
+
 require("dotenv").config();
 
 // =================================================================================================
@@ -228,14 +229,14 @@ const selectedAddress = addressDoc?.addresses?.id(addressId);
     const uniqueShopIds = [...new Set(populatedItems.map(i => i.shop._id.toString()))];
     const shops = await Shop.find({ _id: { $in: uniqueShopIds } });
 
+   console.log(shops,'shops');
    
 
-    for (let shop of shops) {
-
-const data = shopWiseMap.get(shop._id.toString());
-
+   for (let shop of shops) {
+  const data = shopWiseMap.get(shop._id.toString());
   if (!data) continue; // safety check
-      const fullDetails = {
+
+  const fullDetails = {
     customer: {
       name: user.name,
       email: user.email,
@@ -261,30 +262,29 @@ const data = shopWiseMap.get(shop._id.toString());
     orderTime: order.createdAt,
   };
 
-      const notificationDoc = new Notification({
-        title: "🛒 New Order Alert!",
-        body: `🎉 You received a new order from ${user.name} on ${order.createdAt}. Check your email for full details.`,
-        type: "order",
-        recipients: [
-          {
-            userId: shop.owner,
-            isRead: false,
-          },
-        ],
-        data: {
-          orderId: order._id,
-          shopId: shop._id,
-          userName: user.name,
-          orderTime: order.createdAt,
-          fullDetails,
-          // html:buildOrderHtml(fullDetails)
-        },
-      });
+  // Save notification
+  const notificationDoc = new Notification({
+    title: "🛒 New Order Alert!",
+    body: `🎉 You received a new order from ${user.name} on ${order.createdAt}.`,
+    type: "order",
+    recipients: [
+      {
+        userId: shop.owner,
+        isRead: false,
+      },
+    ],
+    data: {
+      orderId: order._id,
+      shopId: shop._id,
+      userName: user.name,
+      orderTime: order.createdAt,
+      fullDetails,
+    },
+  });
+  await notificationDoc.save();
 
-      await notificationDoc.save();
-    }
-
-const shopOwner = await User.findById(Shop.owner);
+  // Get shop owner
+  const shopOwner = await User.findById(shop.owner);
   const ownerTokens = shopOwner?.fcmTokens || [];
 
   if (ownerTokens.length > 0) {
@@ -293,27 +293,31 @@ const shopOwner = await User.findById(Shop.owner);
         title: "🛒 New Order Received!",
         body: `You have a new order from ${user.name}. Total ₹${fullDetails.totalAmount}`,
       },
-      tokens: ownerTokens,
       data: {
         orderId: order._id.toString(),
-        shopId: Shop._id.toString(),
+        shopId: shop._id.toString(),
       },
+      tokens: ownerTokens,
     };
 
     try {
       const fcmResponse = await admin.messaging().sendEachForMulticast(fcmMessage);
       console.log(
-        `✅ FCM Sent to ${Shop.shopName}: Success=${fcmResponse.successCount}, Failures=${fcmResponse.failureCount}`
+        `✅ FCM Sent to ${shop.shopName}: Success=${fcmResponse.successCount}, Failures=${fcmResponse.failureCount}`
       );
     } catch (err) {
       console.error("❌ Error sending FCM to shop owner:", err);
     }
   }
-    res.status(200).json({ message: "Order placed successfully", order });
-  } catch (err) {
-    console.error("Order error:", err.message);
-    res.status(500).json({ message: "Failed to place order", error: err.message });
-  }
+}
+
+// Response after loop
+res.status(200).json({ message: "Order placed successfully", order });
+} catch (err) {
+  console.error("Order error:", err.message);
+  res.status(500).json({ message: "Failed to place order", error: err.message });
+}
+
 };
 
 //     for (let [shopId, data] of shopWiseMap.entries()) {
