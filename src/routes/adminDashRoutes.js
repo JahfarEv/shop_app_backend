@@ -15,7 +15,7 @@ const {getManagerCommission} = require("../controller/adminAuth.controller");
 const {handleCreateAdvertisement} = require("../controller/adminAuth.controller");
 const {handleGetAdvertisements} = require("../controller/adminAuth.controller");
 const {unapprovedSalesmen} = require("../controller/adminAuth.controller")
-
+const {getAllMarketingManagers} = require("../controller/adminAuth.controller")
 const upload = require("../middleware/multer");
 
 // users api route of admin pannel -
@@ -64,6 +64,7 @@ router.patch('/approve/manager/:managerId', approveManager);
 // PATCH /adminDashboard/approve/salesman/:salesmanId
 router.patch('/approve/salesman/:salesmanId', approveSalesman);
 
+router.get('/managers', getAllMarketingManagers)
 
 router.put('/commission/salesman', setSalesmanCommission);
 router.put('/commission/manager', setManagerCommission);

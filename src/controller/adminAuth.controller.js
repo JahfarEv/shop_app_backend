@@ -197,6 +197,29 @@ const approveSalesman = async (req, res) => {
   }
 };
 
+
+
+const getAllMarketingManagers = async (req, res) => {
+  try {
+    const managers = await MarketingManager.find()
+      .populate("assignedSalesmen", "name mobileNumber email") // ✅ optional populate salesmen
+      .sort({ createdAt: -1 }); // latest first
+
+    return res.status(200).json({
+      success: true,
+      message: "All Marketing Managers fetched successfully",
+      data: managers,
+    });
+  } catch (error) {
+    console.error("❌ Error fetching managers:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Error fetching marketing managers",
+      error: error.message,
+    });
+  }
+};
+
 const setSalesmanCommission = async (req, res) => {
   const { amount, salesTarget, subscriptionCommission } = req.body;
 
@@ -425,4 +448,5 @@ module.exports = {
   handleCreateAdvertisement,
   handleGetAdvertisements,
   unapprovedSalesmen,
+  getAllMarketingManagers
 };

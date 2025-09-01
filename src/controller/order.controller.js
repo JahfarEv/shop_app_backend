@@ -5,6 +5,7 @@ const Product = require("../models/product");
 const DeliveryAddress = require("../models/deliveryAddressmodel");
 const Notification = require("../models/notificationModel");
 const nodemailer = require("nodemailer");
+const userModel = require("../models/user");
 require("dotenv").config();
 
 // =================================================================================================
@@ -283,7 +284,7 @@ const data = shopWiseMap.get(shop._id.toString());
       await notificationDoc.save();
     }
 
-const shopOwner = await userModel.findById(Shop.owner);
+const shopOwner = await User.findById(Shop.owner);
   const ownerTokens = shopOwner?.fcmTokens || [];
 
   if (ownerTokens.length > 0) {
