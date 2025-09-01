@@ -287,28 +287,59 @@ const selectedAddress = addressDoc?.addresses?.id(addressId);
   const shopOwner = await User.findById(shop.owner);
   const ownerTokens = shopOwner?.fcmTokens || [];
 
-  if (ownerTokens.length > 0) {
-    const fcmMessage = {
-      notification: {
-        title: "🛒 New Order Received!",
-        body: `You have a new order from ${user.name}. Total ₹${fullDetails.totalAmount}`,
-      },
-      data: {
-        orderId: order._id.toString(),
-        shopId: shop._id.toString(),
-      },
-      tokens: ownerTokens,
-    };
+  // if (ownerTokens.length > 0) {
+  //   const fcmMessage = {
+  //     notification: {
+  //       title: "🛒 New Order Received!",
+  //       body: `You have a new order from ${user.name}. Total ₹${fullDetails.totalAmount}`,
+  //     },
+  //     data: {
+  //       orderId: order._id.toString(),
+  //       shopId: shop._id.toString(),
+  //     },
+  //     tokens: ownerTokens,
+  //   };
 
-    try {
-      const fcmResponse = await admin.messaging().sendEachForMulticast(fcmMessage);
-      console.log(
-        `✅ FCM Sent to ${shop.shopName}: Success=${fcmResponse.successCount}, Failures=${fcmResponse.failureCount}`
-      );
-    } catch (err) {
-      console.error("❌ Error sending FCM to shop owner:", err);
-    }
+  //   try {
+  //     const fcmResponse = await admin.messaging().sendEachForMulticast(fcmMessage);
+  //     console.log(
+  //       `✅ FCM Sent to ${shop.shopName}: Success=${fcmResponse.successCount}, Failures=${fcmResponse.failureCount}`
+  //     );
+  //   } catch (err) {
+  //     console.error("❌ Error sending FCM to shop owner:", err);
+  //   }
+  // }
+
+
+
+  if (ownerTokens.length > 0) {
+  // Create item list string
+  const itemsList = fullDetails.items
+    .map(i => `${i.name} x${i.quantity}`)
+    .join(", "); // you can also use '\n' for line breaks
+
+  const fcmMessage = {
+    notification: {
+      title: "🛒 New Order Received!",
+      body: `You have a new order from ${fullDetails.customer.name}. Total ₹${fullDetails.totalAmount}. Items: ${itemsList}`,
+    },
+    data: {
+      orderId: order._id.toString(),
+      shopId: shop._id.toString(),
+    },
+    tokens: ownerTokens,
+  };
+
+  try {
+    const fcmResponse = await admin.messaging().sendEachForMulticast(fcmMessage);
+    console.log(
+      `✅ FCM Sent to ${shop.shopName}: Success=${fcmResponse.successCount}, Failures=${fcmResponse.failureCount}`
+    );
+  } catch (err) {
+    console.error("❌ Error sending FCM to shop owner:", err);
   }
+}
+
 }
 
 // Response after loop
