@@ -467,52 +467,6 @@ const handleStartSubscription = async (req, res) => {
 };
 
 // ✅ 2. Verify payment → Activate subscription
-// const verifyPayment = async (req, res) => {
-//   const { razorpay_payment_id, razorpay_order_id, razorpay_signature } =
-//     req.body;
-
-//   try {
-//     const body = razorpay_order_id + "|" + razorpay_payment_id;
-
-//     const expectedSignature = crypto
-//       .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
-//       .update(body.toString())
-//       .digest("hex");
-
-//     if (expectedSignature !== razorpay_signature) {
-//       return res
-//         .status(400)
-//         .json({ success: false, message: "Invalid signature" });
-//     }
-
-//     // Fetch order to get notes
-//     const order = await razorpay.orders.fetch(razorpay_order_id);
-//     const { userId, shopId, subscriptionPlanId } = order.notes;
-
-//     // Call helper
-//     const subscription = await activateOrExtendSubscription(
-//       userId,
-//       shopId,
-//       subscriptionPlanId
-//     );
-
-//     return res.status(200).json({
-//       success: true,
-//       message: "Payment verified & subscription activated",
-//       subscription,
-//     });
-//   } catch (err) {
-//     console.error("Payment verification failed:", err.message);
-//     return res
-//       .status(500)
-//       .json({ success: false, message: "Internal server error" });
-//   }
-// };
-
-
-
-
-// ✅ 2. Verify payment → Activate subscription
 const verifyPayment = async (req, res) => {
   const { razorpay_payment_id, razorpay_order_id, razorpay_signature } =
     req.body;
@@ -535,38 +489,17 @@ const verifyPayment = async (req, res) => {
     const order = await razorpay.orders.fetch(razorpay_order_id);
     const { userId, shopId, subscriptionPlanId } = order.notes;
 
-    // Fetch plan
-    const plan = await SubscriptionPlan.findById(subscriptionPlanId);
-    if (!plan) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Subscription plan not found" });
-    }
-
-    // Calculate subscription dates
-    const startDate = new Date();
-    const endDate = moment(startDate)
-      .add(plan.durationInMonths, "months")
-      .toDate();
-
-    // ✅ Update Shop subscription
-    const shop = await Shop.findByIdAndUpdate(
+    // Call helper
+    const subscription = await activateOrExtendSubscription(
+      userId,
       shopId,
-      {
-        $set: {
-          "subscription.plan": plan._id,
-          "subscription.startDate": startDate,
-          "subscription.endDate": endDate,
-          "subscription.isActive": true,
-        },
-      },
-      { new: true }
-    ).populate("subscription.plan");
+      subscriptionPlanId
+    );
 
     return res.status(200).json({
       success: true,
       message: "Payment verified & subscription activated",
-      subscription: shop.subscription,
+      subscription,
     });
   } catch (err) {
     console.error("Payment verification failed:", err.message);
@@ -575,7 +508,6 @@ const verifyPayment = async (req, res) => {
       .json({ success: false, message: "Internal server error" });
   }
 };
-
 
 async function handleCheckSubscriptionStatus(req, res) {
   const userId = req.user.id;

@@ -44,6 +44,21 @@ async function activateOrExtendSubscription(userId, shopId, subscriptionPlanId) 
     });
   }
 
+    // ✅ Update Shop.subscription snapshot
+
+  await Shop.findByIdAndUpdate(
+    shopId,
+    {
+      $set: {
+        "subscription.plan": subscription.subscriptionPlanId,
+        "subscription.startDate": subscription.startDate,
+        "subscription.endDate": subscription.endDate,
+        "subscription.isActive": true,
+      },
+    },
+    { new: true }
+  );
+
   return subscription;
 }
 
