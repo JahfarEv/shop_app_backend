@@ -2,6 +2,7 @@
 const moment = require("moment-timezone");
 const Subscription = require("../models/subscription");
 const SubscriptionPlan = require("../models/SubscriptionPlan");
+const Shop = require("../models/storeModel");
 
 async function activateOrExtendSubscription(userId, shopId, subscriptionPlanId) {
   const plan = await SubscriptionPlan.findById(subscriptionPlanId);
