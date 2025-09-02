@@ -272,201 +272,201 @@ const Shop = require("../models/storeModel");
 // ==============================
 // Start / Extend Subscription (Shop-based)
 // ==============================
-async function handleStartSubscription(req, res) {
-  const userId = req.user.id;
-  const shopId = req.body.shopId; // ✅ shop-based subscription
-  const subscriptionPlanId = req.body.subscriptionPlanId;
-
-  const now = moment().tz("Asia/Kolkata");
-
-  try {
-    // ===================================== 📌 FETCH PLAN DETAILS ================================
-    const plan = await SubscriptionPlan.findById(subscriptionPlanId);
-    if (!plan) {
-      return res.status(404).json({
-        success: false,
-        message: "Subscription plan not found",
-      });
-    }
-console.log(plan ,'plan');
-
-    const amount = plan.amount;
-
-    // ===================================== 🔄 CHECK ACTIVE SUBSCRIPTION =========================
-    let existingSubscription = await Subscription.findOne({
-      userId,
-      shopId,
-      status: "active",
-    });
-
-    let responseMessage = "";
-    let subscription;
-
-    if (existingSubscription) {
-      // ===================================== ⏫ EXTEND SUBSCRIPTION ================================
-      let newEndDate = moment(existingSubscription.endDate);
-
-      if (plan.durationType === "monthly") {
-        newEndDate = newEndDate.add(1, "month");
-      } else if (plan.durationType === "yearly") {
-        newEndDate = newEndDate.add(1, "year");
-      }
-
-      existingSubscription.endDate = newEndDate.toDate();
-      existingSubscription.amount += amount;
-      await existingSubscription.save();
-
-      responseMessage = "Subscription extended";
-      subscription = existingSubscription;
-    } else {
-      // ===================================== 🆕 CREATE NEW SUBSCRIPTION =============================
-      const startDate = now.clone();
-
-      let endDate;
-      if (plan.durationType === "monthly") {
-        endDate = now.clone().add(1, "month");
-      } else if (plan.durationType === "yearly") {
-        endDate = now.clone().add(1, "year");
-      }
-
-      // 👉 First-time shop subscription → Add 2 months free
-      const previousSubscription = await Subscription.findOne({ userId, shopId });
-      if (!previousSubscription) {
-        endDate = endDate.clone().add(2, "months");
-        console.log("🎉 First subscription for this shop! Added 2 months free.");
-      }
-
-      const newSubscription = await Subscription.create({
-        userId,
-        shopId,
-        subscriptionPlanId,
-        amount,
-        startDate: startDate.toDate(),
-        endDate: endDate.toDate(),
-        status: "active",
-        paymentStatus: "paid",
-      });
-
-      await User.findByIdAndUpdate(userId, {
-        subscriptionId: newSubscription._id,
-      });
-
-      responseMessage = previousSubscription
-        ? "Subscription activated"
-        : "Subscription activated with 2 months free!";
-
-      subscription = newSubscription;
-    }
-
-    // ===================================== 🔔 SEND FCM NOTIFICATION ==============================
-    const user = await User.findById(userId);
-    const tokens = user?.fcmTokens || [];
-
-    if (tokens.length > 0) {
-      const message = {
-        notification: {
-          title: "✅ Subscription Active!",
-          body: responseMessage,
-        },
-        tokens,
-      };
-      await admin.messaging().sendEachForMulticast(message);
-    }
-
-    // ===================================== 🗂️ SAVE NOTIFICATION TO DB ============================
-    const notificationDoc = new Notification({
-      title: "✅ Subscription Active!",
-      body: responseMessage,
-      type: "subscription_activated",
-      recipients: [
-        {
-          userId: user._id,
-          isRead: false,
-        },
-      ],
-      data: {
-        subscriptionId: subscription._id,
-        shopId: shopId,
-        amount: subscription.amount,
-        startDate: subscription.startDate,
-        endDate: subscription.endDate,
-      },
-    });
-
-    await notificationDoc.save();
-
-    // ===================================== ✅ RESPONSE ============================================
-    return res.status(200).json({
-      success: true,
-      message: responseMessage,
-      subscription,
-    });
-  } catch (err) {
-    console.error("Failed to start subscription:", err.message);
-    return res.status(500).json({
-      success: false,
-      message: "Internal Server Error",
-    });
-  }
-}
-
-// const razorpay = new Razorpay({
-//   key_id: process.env.RAZORPAY_KEY_ID,
-//   key_secret: process.env.RAZORPAY_KEY_SECRET,
-// });
-
-// // ✅ 1. Start subscription → Create Razorpay order
-// const handleStartSubscription = async (req, res) => {
+// async function handleStartSubscription(req, res) {
 //   const userId = req.user.id;
-//   const { shopId, subscriptionPlanId } = req.body;
+//   const shopId = req.body.shopId; // ✅ shop-based subscription
+//   const subscriptionPlanId = req.body.subscriptionPlanId;
+
+//   const now = moment().tz("Asia/Kolkata");
 
 //   try {
+//     // ===================================== 📌 FETCH PLAN DETAILS ================================
 //     const plan = await SubscriptionPlan.findById(subscriptionPlanId);
 //     if (!plan) {
-//       return res
-//         .status(404)
-//         .json({ success: false, message: "Subscription plan not found" });
+//       return res.status(404).json({
+//         success: false,
+//         message: "Subscription plan not found",
+//       });
 //     }
-//   const shop = await Shop.findById(shopId, {
-//       "subscription.startDate": 1,
-//       "subscription.endDate": 1,
-//       "subscription.isActive": 1,
-//       _id: 0
-//     }).lean();
+// console.log(plan ,'plan');
 
-//     if (!shop) {
-//       return res.status(404).json({ success: false, message: "Shop not found" });
+//     const amount = plan.amount;
+
+//     // ===================================== 🔄 CHECK ACTIVE SUBSCRIPTION =========================
+//     let existingSubscription = await Subscription.findOne({
+//       userId,
+//       shopId,
+//       status: "active",
+//     });
+
+//     let responseMessage = "";
+//     let subscription;
+
+//     if (existingSubscription) {
+//       // ===================================== ⏫ EXTEND SUBSCRIPTION ================================
+//       let newEndDate = moment(existingSubscription.endDate);
+
+//       if (plan.durationType === "monthly") {
+//         newEndDate = newEndDate.add(1, "month");
+//       } else if (plan.durationType === "yearly") {
+//         newEndDate = newEndDate.add(1, "year");
+//       }
+
+//       existingSubscription.endDate = newEndDate.toDate();
+//       existingSubscription.amount += amount;
+//       await existingSubscription.save();
+
+//       responseMessage = "Subscription extended";
+//       subscription = existingSubscription;
+//     } else {
+//       // ===================================== 🆕 CREATE NEW SUBSCRIPTION =============================
+//       const startDate = now.clone();
+
+//       let endDate;
+//       if (plan.durationType === "monthly") {
+//         endDate = now.clone().add(1, "month");
+//       } else if (plan.durationType === "yearly") {
+//         endDate = now.clone().add(1, "year");
+//       }
+
+//       // 👉 First-time shop subscription → Add 2 months free
+//       const previousSubscription = await Subscription.findOne({ userId, shopId });
+//       if (!previousSubscription) {
+//         endDate = endDate.clone().add(2, "months");
+//         console.log("🎉 First subscription for this shop! Added 2 months free.");
+//       }
+
+//       const newSubscription = await Subscription.create({
+//         userId,
+//         shopId,
+//         subscriptionPlanId,
+//         amount,
+//         startDate: startDate.toDate(),
+//         endDate: endDate.toDate(),
+//         status: "active",
+//         paymentStatus: "paid",
+//       });
+
+//       await User.findByIdAndUpdate(userId, {
+//         subscriptionId: newSubscription._id,
+//       });
+
+//       responseMessage = previousSubscription
+//         ? "Subscription activated"
+//         : "Subscription activated with 2 months free!";
+
+//       subscription = newSubscription;
 //     }
-//     const amount = plan.amount * 100; // Razorpay expects paise
 
-//     const options = {
-//       amount,
-//       currency: "INR",
-//       receipt: `receipt_${Date.now()}`,
-//       notes: { userId, shopId, subscriptionPlanId },
-//     };
+//     // ===================================== 🔔 SEND FCM NOTIFICATION ==============================
+//     const user = await User.findById(userId);
+//     const tokens = user?.fcmTokens || [];
 
-//     const order = await razorpay.orders.create(options);
+//     if (tokens.length > 0) {
+//       const message = {
+//         notification: {
+//           title: "✅ Subscription Active!",
+//           body: responseMessage,
+//         },
+//         tokens,
+//       };
+//       await admin.messaging().sendEachForMulticast(message);
+//     }
 
+//     // ===================================== 🗂️ SAVE NOTIFICATION TO DB ============================
+//     const notificationDoc = new Notification({
+//       title: "✅ Subscription Active!",
+//       body: responseMessage,
+//       type: "subscription_activated",
+//       recipients: [
+//         {
+//           userId: user._id,
+//           isRead: false,
+//         },
+//       ],
+//       data: {
+//         subscriptionId: subscription._id,
+//         shopId: shopId,
+//         amount: subscription.amount,
+//         startDate: subscription.startDate,
+//         endDate: subscription.endDate,
+//       },
+//     });
+
+//     await notificationDoc.save();
+
+//     // ===================================== ✅ RESPONSE ============================================
 //     return res.status(200).json({
 //       success: true,
-//       message: "Order created",
-//       orderId: order.id,
-//       amount: order.amount,
-//       currency: order.currency,
-//       plan,
-//   subscription: shop.subscription, // ✅ directly return subscription
-//       razorpayKey: process.env.RAZORPAY_KEY_ID, // ✅ send public key for frontend
+//       message: responseMessage,
+//       subscription,
 //     });
 //   } catch (err) {
-//     console.error("Failed to create Razorpay order:", err.message);
-//     return res
-//       .status(500)
-//       .json({ success: false, message: "Internal server error" });
+//     console.error("Failed to start subscription:", err.message);
+//     return res.status(500).json({
+//       success: false,
+//       message: "Internal Server Error",
+//     });
 //   }
-// };
+// }
 
-// // ✅ 2. Verify payment → Activate subscription
+const razorpay = new Razorpay({
+  key_id: process.env.RAZORPAY_KEY_ID,
+  key_secret: process.env.RAZORPAY_KEY_SECRET,
+});
+
+// ✅ 1. Start subscription → Create Razorpay order
+const handleStartSubscription = async (req, res) => {
+  const userId = req.user.id;
+  const { shopId, subscriptionPlanId } = req.body;
+
+  try {
+    const plan = await SubscriptionPlan.findById(subscriptionPlanId);
+    if (!plan) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Subscription plan not found" });
+    }
+  const shop = await Shop.findById(shopId, {
+      "subscription.startDate": 1,
+      "subscription.endDate": 1,
+      "subscription.isActive": 1,
+      _id: 0
+    }).lean();
+
+    if (!shop) {
+      return res.status(404).json({ success: false, message: "Shop not found" });
+    }
+    const amount = plan.amount * 100; // Razorpay expects paise
+
+    const options = {
+      amount,
+      currency: "INR",
+      receipt: `receipt_${Date.now()}`,
+      notes: { userId, shopId, subscriptionPlanId },
+    };
+
+    const order = await razorpay.orders.create(options);
+
+    return res.status(200).json({
+      success: true,
+      message: "Order created",
+      orderId: order.id,
+      amount: order.amount,
+      currency: order.currency,
+      plan,
+  subscription: shop.subscription, // ✅ directly return subscription
+      razorpayKey: process.env.RAZORPAY_KEY_ID, // ✅ send public key for frontend
+    });
+  } catch (err) {
+    console.error("Failed to create Razorpay order:", err.message);
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
+  }
+};
+
+// ✅ 2. Verify payment → Activate subscription
 // const verifyPayment = async (req, res) => {
 //   const { razorpay_payment_id, razorpay_order_id, razorpay_signature } =
 //     req.body;
@@ -509,56 +509,124 @@ console.log(plan ,'plan');
 //   }
 // };
 
-// async function handleCheckSubscriptionStatus(req, res) {
-//   const userId = req.user.id;
 
-//   debug(`Checking subscription status - User: ${userId}`);
 
-//   try {
-//     const user = await User.findById(userId).populate("subscriptionId");
-//     if (!user || !user.subscriptionId) {
-//       info(`No active subscription found - User: ${userId}`);
-//       return res.status(200).json({
-//         success: true,
-//         message: "No active subscription",
-//         subscription: null,
-//       });
-//     }
 
-//     const subscription = user.subscriptionId;
-//     const currentDate = moment().tz("Asia/Kolkata");
+// ✅ 2. Verify payment → Activate subscription
+const verifyPayment = async (req, res) => {
+  const { razorpay_payment_id, razorpay_order_id, razorpay_signature } =
+    req.body;
 
-//     if (currentDate.isAfter(subscription.endDate)) {
-//       subscription.status = "expired";
-//       await subscription.save();
-//       info(
-//         `Subscription expired - User: ${userId}, Subscription ID: ${subscription._id}`
-//       );
-//       return res
-//         .status(200)
-//         .json({ success: true, message: "Subscription expired", subscription });
-//     }
+  try {
+    const body = razorpay_order_id + "|" + razorpay_payment_id;
 
-//     subscription.startDate = moment(subscription.startDate)
-//       .tz("Asia/Kolkata")
-//       .format();
-//     subscription.endDate = moment(subscription.endDate)
-//       .tz("Asia/Kolkata")
-//       .format();
+    const expectedSignature = crypto
+      .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
+      .update(body.toString())
+      .digest("hex");
 
-//     debug(
-//       `Active subscription found - User: ${userId}, Status: ${subscription.status}, Plan: ${subscription.plan}`
-//     );
-//     return res.status(200).json({ success: true, subscription });
-//   } catch (err) {
-//     error(
-//       `Failed to check subscription status - User: ${userId}, Error: ${err.message}`
-//     );
-//     return res
-//       .status(500)
-//       .json({ success: false, message: "Internal Server Error" });
-//   }
-// }
+    if (expectedSignature !== razorpay_signature) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid signature" });
+    }
+
+    // Fetch order to get notes
+    const order = await razorpay.orders.fetch(razorpay_order_id);
+    const { userId, shopId, subscriptionPlanId } = order.notes;
+
+    // Fetch plan
+    const plan = await SubscriptionPlan.findById(subscriptionPlanId);
+    if (!plan) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Subscription plan not found" });
+    }
+
+    // Calculate subscription dates
+    const startDate = new Date();
+    const endDate = moment(startDate)
+      .add(plan.durationInMonths, "months")
+      .toDate();
+
+    // ✅ Update Shop subscription
+    const shop = await Shop.findByIdAndUpdate(
+      shopId,
+      {
+        $set: {
+          "subscription.plan": plan._id,
+          "subscription.startDate": startDate,
+          "subscription.endDate": endDate,
+          "subscription.isActive": true,
+        },
+      },
+      { new: true }
+    ).populate("subscription.plan");
+
+    return res.status(200).json({
+      success: true,
+      message: "Payment verified & subscription activated",
+      subscription: shop.subscription,
+    });
+  } catch (err) {
+    console.error("Payment verification failed:", err.message);
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
+  }
+};
+
+
+async function handleCheckSubscriptionStatus(req, res) {
+  const userId = req.user.id;
+
+  debug(`Checking subscription status - User: ${userId}`);
+
+  try {
+    const user = await User.findById(userId).populate("subscriptionId");
+    if (!user || !user.subscriptionId) {
+      info(`No active subscription found - User: ${userId}`);
+      return res.status(200).json({
+        success: true,
+        message: "No active subscription",
+        subscription: null,
+      });
+    }
+
+    const subscription = user.subscriptionId;
+    const currentDate = moment().tz("Asia/Kolkata");
+
+    if (currentDate.isAfter(subscription.endDate)) {
+      subscription.status = "expired";
+      await subscription.save();
+      info(
+        `Subscription expired - User: ${userId}, Subscription ID: ${subscription._id}`
+      );
+      return res
+        .status(200)
+        .json({ success: true, message: "Subscription expired", subscription });
+    }
+
+    subscription.startDate = moment(subscription.startDate)
+      .tz("Asia/Kolkata")
+      .format();
+    subscription.endDate = moment(subscription.endDate)
+      .tz("Asia/Kolkata")
+      .format();
+
+    debug(
+      `Active subscription found - User: ${userId}, Status: ${subscription.status}, Plan: ${subscription.plan}`
+    );
+    return res.status(200).json({ success: true, subscription });
+  } catch (err) {
+    error(
+      `Failed to check subscription status - User: ${userId}, Error: ${err.message}`
+    );
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal Server Error" });
+  }
+}
 
 // in this we send the all subscription with the subscription - plan details also (rn we are using this controller in the admin pannel to see subscription details )
 async function handleGetAllSubscriptions(req, res) {
