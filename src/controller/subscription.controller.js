@@ -415,7 +415,101 @@ const razorpay = new Razorpay({
   key_secret: process.env.RAZORPAY_KEY_SECRET,
 });
 
-// ✅ 1. Start subscription → Create Razorpay order
+// // ✅ 1. Start subscription → Create Razorpay order
+// const handleStartSubscription = async (req, res) => {
+//   const userId = req.user.id;
+//   const { shopId, subscriptionPlanId } = req.body;
+
+//   try {
+//     const plan = await SubscriptionPlan.findById(subscriptionPlanId);
+//     if (!plan) {
+//       return res
+//         .status(404)
+//         .json({ success: false, message: "Subscription plan not found" });
+//     }
+//   const shop = await Shop.findById(shopId, {
+//       "subscription.startDate": 1,
+//       "subscription.endDate": 1,
+//       "subscription.isActive": 1,
+//       _id: 0
+//     }).lean();
+
+//     if (!shop) {
+//       return res.status(404).json({ success: false, message: "Shop not found" });
+//     }
+//     const amount = plan.amount * 100; // Razorpay expects paise
+
+//     const options = {
+//       amount,
+//       currency: "INR",
+//       receipt: `receipt_${Date.now()}`,
+//       notes: { userId, shopId, subscriptionPlanId },
+//     };
+
+//     const order = await razorpay.orders.create(options);
+
+//     return res.status(200).json({
+//       success: true,
+//       message: "Order created",
+//       orderId: order.id,
+//       amount: order.amount,
+//       currency: order.currency,
+//       plan,
+//   subscription: shop.subscription, // ✅ directly return subscription
+//       razorpayKey: process.env.RAZORPAY_KEY_ID, // ✅ send public key for frontend
+//     });
+//   } catch (err) {
+//     console.error("Failed to create Razorpay order:", err.message);
+//     return res
+//       .status(500)
+//       .json({ success: false, message: "Internal server error" });
+//   }
+// };
+
+// // ✅ 2. Verify payment → Activate subscription
+// const verifyPayment = async (req, res) => {
+//   const { razorpay_payment_id, razorpay_order_id, razorpay_signature } =
+//     req.body;
+
+//   try {
+//     const body = razorpay_order_id + "|" + razorpay_payment_id;
+
+//     const expectedSignature = crypto
+//       .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
+//       .update(body.toString())
+//       .digest("hex");
+
+//     if (expectedSignature !== razorpay_signature) {
+//       return res
+//         .status(400)
+//         .json({ success: false, message: "Invalid signature" });
+//     }
+
+//     // Fetch order to get notes
+//     const order = await razorpay.orders.fetch(razorpay_order_id);
+//     const { userId, shopId, subscriptionPlanId } = order.notes;
+
+//     // Call helper
+//     const subscription = await activateOrExtendSubscription(
+//       userId,
+//       shopId,
+//       subscriptionPlanId
+//     );
+
+//     return res.status(200).json({
+//       success: true,
+//       message: "Payment verified & subscription activated",
+//       subscription,
+//     });
+//   } catch (err) {
+//     console.error("Payment verification failed:", err.message);
+//     return res
+//       .status(500)
+//       .json({ success: false, message: "Internal server error" });
+//   }
+// };
+
+
 const handleStartSubscription = async (req, res) => {
   const userId = req.user.id;
   const { shopId, subscriptionPlanId } = req.body;
@@ -427,16 +521,20 @@ const handleStartSubscription = async (req, res) => {
         .status(404)
         .json({ success: false, message: "Subscription plan not found" });
     }
-  const shop = await Shop.findById(shopId, {
+
+    const shop = await Shop.findById(shopId, {
       "subscription.startDate": 1,
       "subscription.endDate": 1,
       "subscription.isActive": 1,
-      _id: 0
+      _id: 0,
     }).lean();
 
     if (!shop) {
-      return res.status(404).json({ success: false, message: "Shop not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Shop not found" });
     }
+
     const amount = plan.amount * 100; // Razorpay expects paise
 
     const options = {
@@ -455,8 +553,8 @@ const handleStartSubscription = async (req, res) => {
       amount: order.amount,
       currency: order.currency,
       plan,
-  subscription: shop.subscription, // ✅ directly return subscription
-      razorpayKey: process.env.RAZORPAY_KEY_ID, // ✅ send public key for frontend
+      subscription: shop.subscription, // return current subscription
+      razorpayKey: process.env.RAZORPAY_KEY_ID,
     });
   } catch (err) {
     console.error("Failed to create Razorpay order:", err.message);
@@ -466,7 +564,7 @@ const handleStartSubscription = async (req, res) => {
   }
 };
 
-// ✅ 2. Verify payment → Activate subscription
+// ✅ 2. Verify payment → Activate or extend subscription
 const verifyPayment = async (req, res) => {
   const { razorpay_payment_id, razorpay_order_id, razorpay_signature } =
     req.body;
@@ -485,21 +583,53 @@ const verifyPayment = async (req, res) => {
         .json({ success: false, message: "Invalid signature" });
     }
 
-    // Fetch order to get notes
+    // Fetch order from Razorpay to get notes
     const order = await razorpay.orders.fetch(razorpay_order_id);
-    const { userId, shopId, subscriptionPlanId } = order.notes;
+    const { shopId, subscriptionPlanId } = order.notes;
 
-    // Call helper
-    const subscription = await activateOrExtendSubscription(
-      userId,
+    // Fetch plan & shop
+    const plan = await SubscriptionPlan.findById(subscriptionPlanId);
+    const shop = await Shop.findById(shopId);
+
+    if (!plan || !shop) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Plan or Shop not found" });
+    }
+
+    const now = new Date();
+    let startDate = now;
+    let endDate = new Date();
+
+    if (shop.subscription?.isActive && shop.subscription.endDate > now) {
+      // extend existing subscription
+      startDate = shop.subscription.startDate;
+      endDate = new Date(shop.subscription.endDate);
+      endDate.setMonth(endDate.getMonth() + plan.durationMonths);
+    } else {
+      // new subscription
+      startDate = now;
+      endDate.setMonth(startDate.getMonth() + plan.durationMonths);
+    }
+
+    // ✅ Update subscription in DB
+    const updatedShop = await Shop.findByIdAndUpdate(
       shopId,
-      subscriptionPlanId
-    );
+      {
+        $set: {
+          "subscription.plan": subscriptionPlanId,
+          "subscription.startDate": startDate,
+          "subscription.endDate": endDate,
+          "subscription.isActive": true,
+        },
+      },
+      { new: true } // return updated doc
+    ).populate("subscription.plan");
 
     return res.status(200).json({
       success: true,
       message: "Payment verified & subscription activated",
-      subscription,
+      subscription: updatedShop.subscription,
     });
   } catch (err) {
     console.error("Payment verification failed:", err.message);
@@ -508,6 +638,7 @@ const verifyPayment = async (req, res) => {
       .json({ success: false, message: "Internal server error" });
   }
 };
+
 
 async function handleCheckSubscriptionStatus(req, res) {
   const userId = req.user.id;
