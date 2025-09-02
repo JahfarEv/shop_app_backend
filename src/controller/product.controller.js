@@ -127,6 +127,26 @@ const handleCreateProduct = async (req, res) => {
       return res.status(404).json({ message: "Shop not found" });
     }
     
+     // ===================================== 🔐 CHECK SUBSCRIPTION =========================
+    if (
+      !shop.subscription ||
+      !shop.subscription.isActive ||
+      !shop.subscription.startDate ||
+      !shop.subscription.endDate
+    ) {
+      return res
+        .status(403)
+        .json({ message: "Subscription is not active. Please subscribe to continue." });
+    }
+
+    // ✅ (Optional extra safeguard: Check date validity)
+    const now = new Date();
+    if (now < shop.subscription.startDate || now > shop.subscription.endDate) {
+      return res
+        .status(403)
+        .json({ message: "Subscription expired or not yet valid." });
+    }
+
 
     const shopCategory = shop.category;
     if (!shopCategory) {
