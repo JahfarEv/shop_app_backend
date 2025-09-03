@@ -14,6 +14,7 @@ const Otp = require("../models/otpModel");
 const crypto = require("crypto");
 const OTPVerification = require("../models/otpModel");
 const ManagerCommissionSettings = require("../models/managerCommisionSettings")
+const MarketingManager = require("../models/MarketingManager.model")
 // ✅ Create Shop
 
 // const createShop = async (req, res) => {
