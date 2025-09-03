@@ -1041,23 +1041,85 @@ if (matchedSalesman) {
     await OTPVerification.deleteOne({ _id: otpRecord._id });
 
     // ✅ If salesman exists, add commission
-    if (matchedSalesman) {
-      matchedSalesman.shopsAddedBySalesman.push(newShop._id);
+//     if (matchedSalesman) {
+//       matchedSalesman.shopsAddedBySalesman.push(newShop._id);
 
-      const settings = await CommissionSettings.findOne();
-      const commission = settings?.salesCommission || 0;
+//       const settings = await CommissionSettings.findOne();
+//       const commission = settings?.salesCommission || 0;
 
-      matchedSalesman.salesCommissionEarned.push({
-        shop: newShop._id,
-        amount: commission,
-      });
+//       matchedSalesman.salesCommissionEarned.push({
+//         shop: newShop._id,
+//         amount: commission,
+//       });
 
-      await matchedSalesman.save();
-    }
+//       await matchedSalesman.save();
+//     }
+//   if (matchedSalesman?.manager) {
+//     const manager = await MarketingManager.findById(matchedSalesman.manager);
+//     if (manager) {
+//       const managerCommission = settings?.salesmanSalesCommissionForManager || 0;
+
+//       manager.commissions.push({
+//         shop: newShop._id,
+//         salesman: matchedSalesman._id,
+//         amount: managerCommission,
+//         type: "via_salesman",
+//       });
+
+//       await manager.save();
+//     }
+//   }
+
+
+// // ------------------ 🧑‍💼 If Manager Directly ------------------
+// else if (matchedManager) {
+//         const managerSettings = await ManagerCommissionSettings.findOne();
+
+//   if (!matchedManager.shopsAddedByManager) {
+//     matchedManager.shopsAddedByManager = [];
+//   }
+//   matchedManager.shopsAddedByManager.push(newShop._id);
+
+//   const managerCommission = managerSettings.subscriptionCommission || 0;
+
+//   matchedManager.commissions.push({
+//     shop: newShop._id,
+//     salesman: null,
+//     amount: managerCommission,
+//     type: "direct",
+//   });
+
+//   await matchedManager.save();
+// }
+
+
+
+// ✅ Fetch both commission configs
+const salesmanSettings = await CommissionSettings.findOne();
+const managerSettings = await ManagerCommissionSettings.findOne();
+
+// ------------------ 🧑‍💼 If Salesman ------------------
+if (matchedSalesman) {
+  if (!matchedSalesman.shopsAddedBySalesman) {
+    matchedSalesman.shopsAddedBySalesman = [];
+  }
+  matchedSalesman.shopsAddedBySalesman.push(newShop._id);
+
+  // salesman commission
+  const commission = salesmanSettings?.salesCommission || 0;
+  matchedSalesman.salesCommissionEarned.push({
+    shop: newShop._id,
+    amount: commission,
+  });
+
+  await matchedSalesman.save();
+
+  // ------------------ 🧑‍💼 Manager via Salesman ------------------
   if (matchedSalesman.manager) {
     const manager = await MarketingManager.findById(matchedSalesman.manager);
     if (manager) {
-      const managerCommission = settings?.salesmanSalesCommissionForManager || 0;
+      const managerCommission =
+        managerSettings?.salesmanSalesCommissionForManager || 0;
 
       manager.commissions.push({
         shop: newShop._id,
@@ -1069,18 +1131,16 @@ if (matchedSalesman) {
       await manager.save();
     }
   }
-
+}
 
 // ------------------ 🧑‍💼 If Manager Directly ------------------
 else if (matchedManager) {
-        const managerSettings = await ManagerCommissionSettings.findOne();
-
   if (!matchedManager.shopsAddedByManager) {
     matchedManager.shopsAddedByManager = [];
   }
   matchedManager.shopsAddedByManager.push(newShop._id);
 
-  const managerCommission = managerSettings.subscriptionCommission || 0;
+  const managerCommission = managerSettings?.subscriptionCommission || 0;
 
   matchedManager.commissions.push({
     shop: newShop._id,
@@ -1091,6 +1151,7 @@ else if (matchedManager) {
 
   await matchedManager.save();
 }
+
 
 
     // 🟢 Manager commission (if salesman belongs to a manager)

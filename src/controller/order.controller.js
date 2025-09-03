@@ -321,7 +321,7 @@ if (ownerTokens.length > 0) {
       } else {
         unit = "pcs"; // fallback unit
       }
-      return `${i.name} x${i.quantity} (${unit})`;
+      return `item name: ${i.name} item quantitty: ${i.quantity} (${unit})`;
     })
     .join(", "); // or use "\n" for multi-line
 
