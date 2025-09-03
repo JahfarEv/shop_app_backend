@@ -13,7 +13,7 @@ const axios = require("axios");
 const Otp = require("../models/otpModel");
 const crypto = require("crypto");
 const OTPVerification = require("../models/otpModel");
-
+const ManagerCommissionSettings = require("../models/managerCommisionSettings")
 // ✅ Create Shop
 
 // const createShop = async (req, res) => {
@@ -1033,6 +1033,49 @@ const createShop = async (req, res) => {
 
       await matchedSalesman.save();
     }
+
+
+    // 🟢 Manager commission (if salesman belongs to a manager)
+  const settings = await ManagerCommissionSettings.findOne().sort({ updatedAt: -1 });
+
+const manager = await MarketingManager.findOne({
+  assignedSalesmen: matchedSalesman._id,
+});
+
+if (manager && settings) {
+  // Calculate manager commission based on % from salesman’s commission
+  const managerCommissionAmount =
+    (commission * settings.salesmanSalesCommissionForManager) / 100;
+
+  manager.commissions.push({
+    shop: newShop._id,
+    salesman: matchedSalesman._id,
+    amount: managerCommissionAmount,
+    type: "via_salesman",
+  });
+
+  await manager.save();
+}
+
+
+
+// ✅ If manager directly adds shop, give manager commission
+if (!matchedSalesman && agentCode) {
+  const manager = await MarketingManager.findOne({ agentCode }); // assuming managers also have unique agentCode
+
+  if (manager) {
+    const settings = await CommissionSettings.findOne();
+    const managerDirectCommission = settings?.managerDirectCommission || 0;
+
+    manager.commissions.push({
+      shop: newShop._id,
+      salesman: null, // no salesman involved
+      amount: managerDirectCommission,
+    });
+
+    await manager.save();
+  }
+}
 
     // 🔔 Send FCM Notification
     const users = await userModel.find({ fcmTokens: { $exists: true, $ne: [] } });
