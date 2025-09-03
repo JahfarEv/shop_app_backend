@@ -991,10 +991,30 @@ const createShop = async (req, res) => {
     }
 
     // ✅ Check if agent code belongs to salesman
+    // let matchedSalesman = null;
+    // if (agentCode) {
+    //   matchedSalesman = await Salesman.findOne({ agentCode });
+    // }
+
+
     let matchedSalesman = null;
-    if (agentCode) {
-      matchedSalesman = await Salesman.findOne({ agentCode });
-    }
+let matchedManager = null;
+
+if (agentCode) {
+  [matchedSalesman, matchedManager] = await Promise.all([
+    Salesman.findOne({ agentCode }),
+    MarketingManager.findOne({ agentCode })
+  ]);
+}
+
+if (matchedSalesman) {
+  console.log("✅ Found Salesman:", matchedSalesman);
+} else if (matchedManager) {
+  console.log("✅ Found Marketing Manager:", matchedManager);
+} else {
+  console.log("❌ No match");
+}
+
 
     // ✅ Create new shop
     const newShop = new Shop({
@@ -1034,6 +1054,43 @@ const createShop = async (req, res) => {
 
       await matchedSalesman.save();
     }
+  if (matchedSalesman.manager) {
+    const manager = await MarketingManager.findById(matchedSalesman.manager);
+    if (manager) {
+      const managerCommission = settings?.salesmanSalesCommissionForManager || 0;
+
+      manager.commissions.push({
+        shop: newShop._id,
+        salesman: matchedSalesman._id,
+        amount: managerCommission,
+        type: "via_salesman",
+      });
+
+      await manager.save();
+    }
+  }
+
+
+// ------------------ 🧑‍💼 If Manager Directly ------------------
+else if (matchedManager) {
+        const managerSettings = await ManagerCommissionSettings.findOne();
+
+  if (!matchedManager.shopsAddedByManager) {
+    matchedManager.shopsAddedByManager = [];
+  }
+  matchedManager.shopsAddedByManager.push(newShop._id);
+
+  const managerCommission = managerSettings.subscriptionCommission || 0;
+
+  matchedManager.commissions.push({
+    shop: newShop._id,
+    salesman: null,
+    amount: managerCommission,
+    type: "direct",
+  });
+
+  await matchedManager.save();
+}
 
 
     // 🟢 Manager commission (if salesman belongs to a manager)

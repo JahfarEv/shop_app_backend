@@ -17,6 +17,7 @@ const registerManager = async (req, res) => {
       pancardNumber,
       password
     } = req.body;
+    const agentCode = `AG-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -28,7 +29,9 @@ const registerManager = async (req, res) => {
       bankAccountNumber,
       bankName, // ✅ added here too
       pancardNumber,
-      password: hashedPassword
+      password: hashedPassword,
+            agentCode: [agentCode],
+
     });
 
     await newManager.save();

@@ -41,11 +41,13 @@ const marketingManagerSchema = new mongoose.Schema(
     pancardNumber: { type: String },
 
     isApproved: { type: Boolean, default: false },
+  agentCode: [{ type: String, unique: true }],
 
     // ✅ Salesmen assigned under this manager
     assignedSalesmen: [
       { type: mongoose.Schema.Types.ObjectId, ref: "Salesman" }
     ],
+shopsAddedByManager: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Shop' }],
 
     // ✅ Commissions earned by manager
     commissions: [
