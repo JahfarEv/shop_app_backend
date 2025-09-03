@@ -19,7 +19,9 @@ pancardNumber: { type: String },
 
   // Store multiple agent codes issued to this salesman
   agentCode: [{ type: String, unique: true }],
-
+ shopsAddedBySalesman: [
+    { type: mongoose.Schema.Types.ObjectId, ref: 'Shop' }
+  ],
   // Shops added using this salesman's agent codes
   // shopsAddedBySalesman: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Shop' }],
    salesCommissionEarned: [
