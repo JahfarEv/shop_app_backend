@@ -30,9 +30,23 @@ pancardNumber: { type: String },
       amount: { type: Number, required: true }
     }
   ],
+  totalCommission: { type: Number, default: 0 },
 
   // Admin approval required before login
   isApproved: { type: Boolean, default: false }
 }, { timestamps: true });
+
+salesmanSchema.pre('save', function (next) {
+  if (this.salesCommissionEarned && this.salesCommissionEarned.length > 0) {
+    this.totalCommission = this.salesCommissionEarned.reduce(
+      (sum, entry) => sum + entry.amount,
+      0
+    );
+  } else {
+    this.totalCommission = 0;
+  }
+  next();
+});
+
 
 module.exports = mongoose.model('Salesman', salesmanSchema);

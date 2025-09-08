@@ -7,7 +7,7 @@ const userSchema = mongoose.Schema({
      },
   email: {
      type: String,
-      required: true,
+      // required: true,
        unique: true 
       },
   mobileNumber: { 
@@ -20,18 +20,18 @@ const userSchema = mongoose.Schema({
      },
   state: { 
     type: String,
-     required: true
+   //   required: true
      },
   place: { 
     type: String
    },
   locality: {
      type: String,
-      required: true
+      // required: true
      },
   pincode: {
      type: String,
-      required: true
+      // required: true
      },
   role: {
     type: String,

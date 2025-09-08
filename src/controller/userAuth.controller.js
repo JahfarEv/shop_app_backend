@@ -32,65 +32,130 @@ const sendEmail = async (email, subject, message) => {
 // place and locality added back to location fields
 // also added new fields (email)
 
+
+
+
+// const handleUserRegistration = async (req, res) => {
+//   try {
+//     const { name, email, mobileNumber, state, password, pincode, place, locality } = req.body;
+
+//     if (!name || !email || !mobileNumber || !password || !state || !pincode || !locality) {
+//       return res.status(400).json({ message: "All required fields must be filled" });
+//     }
+
+//     // Check if any user exists with this email or mobile
+//     const existingUser = await userModel.findOne({
+//       $or: [{ email: email }, { mobileNumber: mobileNumber }],
+//     });
+
+//     // Case 1: User exists and is already verified
+//     if (existingUser && existingUser.isVerified === true) {
+//       return res.status(409).json({ message: "User with this email or mobile number already exists" });
+//     }
+
+//     const hashedPassword = await bcrypt.hash(password, 10);
+//     const otp = Math.floor(100000 + Math.random() * 900000).toString();
+//     const otpExpiry = Date.now() + 5 * 60 * 1000; // 5 minutes
+
+//     // Case 2: User exists but is not verified - update the record
+//     //with this let say somehow user registered once but did not try filling otp and that means the user was not deleted or fully verified (isVerified = true) in the database 
+//     // and if he try registring again in some mean time he will see that his account exist but dont have access 
+//     // so for that we will identify that user (isVerified = false) and send otp to that email again without .save() that same creadentials again or returning that user already exist
+//     if (existingUser && existingUser.isVerified === false) {
+//       existingUser.name = name;
+//       existingUser.email = email;
+//       existingUser.mobileNumber = mobileNumber;
+//       existingUser.password = hashedPassword;
+//       existingUser.state = state;
+//       existingUser.pincode = pincode;
+//       existingUser.place = place;
+//       existingUser.locality = locality;
+//       existingUser.otp = otp;
+//       existingUser.otpExpiry = otpExpiry;
+//       await existingUser.save();
+//     } else {
+//       // Case 3: New user
+//       const newUser = new userModel({
+//         name,
+//         email,
+//         mobileNumber,
+//         password: hashedPassword,
+//         state,
+//         pincode,
+//         place,
+//         locality,
+//         otp: otp,
+//         otpExpiry: otpExpiry,
+//         isVerified: false,
+//       });
+//       await newUser.save();
+//     }
+
+//     await sendEmail(email, "OTP for Registration", `Your OTP is ${otp}. It will expire in 5 minutes.`);
+
+//     return res.status(200).json({ message: "OTP sent to your email for verification" });
+//   } catch (err) {
+//     console.error("Registration error:", err);
+//     return res.status(500).json({ message: "Server error" });
+//   }
+// };
+
+
+
+
+
 const handleUserRegistration = async (req, res) => {
   try {
     const { name, email, mobileNumber, state, password, pincode, place, locality } = req.body;
 
-    if (!name || !email || !mobileNumber || !password || !state || !pincode || !locality) {
-      return res.status(400).json({ message: "All required fields must be filled" });
-    }
-
-    // Check if any user exists with this email or mobile
+    // Check if user already exists
     const existingUser = await userModel.findOne({
-      $or: [{ email: email }, { mobileNumber: mobileNumber }],
+      $or: [{ email }, { mobileNumber }],
     });
 
-    // Case 1: User exists and is already verified
-    if (existingUser && existingUser.isVerified === true) {
+    if (existingUser) {
       return res.status(409).json({ message: "User with this email or mobile number already exists" });
     }
 
+    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const otpExpiry = Date.now() + 5 * 60 * 1000; // 5 minutes
 
-    // Case 2: User exists but is not verified - update the record
-    //with this let say somehow user registered once but did not try filling otp and that means the user was not deleted or fully verified (isVerified = true) in the database 
-    // and if he try registring again in some mean time he will see that his account exist but dont have access 
-    // so for that we will identify that user (isVerified = false) and send otp to that email again without .save() that same creadentials again or returning that user already exist
-    if (existingUser && existingUser.isVerified === false) {
-      existingUser.name = name;
-      existingUser.email = email;
-      existingUser.mobileNumber = mobileNumber;
-      existingUser.password = hashedPassword;
-      existingUser.state = state;
-      existingUser.pincode = pincode;
-      existingUser.place = place;
-      existingUser.locality = locality;
-      existingUser.otp = otp;
-      existingUser.otpExpiry = otpExpiry;
-      await existingUser.save();
-    } else {
-      // Case 3: New user
-      const newUser = new userModel({
-        name,
-        email,
-        mobileNumber,
-        password: hashedPassword,
-        state,
-        pincode,
-        place,
-        locality,
-        otp: otp,
-        otpExpiry: otpExpiry,
-        isVerified: false,
-      });
-      await newUser.save();
-    }
+    // Create new user (fields not required, just saved if provided)
+    const newUser = new userModel({
+      name,
+      email,
+      mobileNumber,
+      password: hashedPassword,
+      state,
+      pincode,
+      place,
+      locality,
+      isVerified: true, // ✅ Mark as verified directly (since no OTP)
+    });
 
-    await sendEmail(email, "OTP for Registration", `Your OTP is ${otp}. It will expire in 5 minutes.`);
+    await newUser.save();
 
-    return res.status(200).json({ message: "OTP sent to your email for verification" });
+    // Generate token
+    const token = jwt.sign(
+      { id: newUser._id, email: newUser.email, mobileNumber: newUser.mobileNumber },
+      process.env.JWT_SECRET,
+      { expiresIn: "365d" }
+    );
+
+    return res.status(201).json({
+      message: "User registered successfully",
+      token,
+      user: {
+        id: newUser._id,
+        name: newUser.name,
+        email: newUser.email,
+        mobileNumber: newUser.mobileNumber,
+        state: newUser.state,
+        pincode: newUser.pincode,
+        place: newUser.place,
+        locality: newUser.locality,
+      },
+    });
   } catch (err) {
     console.error("Registration error:", err);
     return res.status(500).json({ message: "Server error" });

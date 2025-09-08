@@ -447,6 +447,54 @@ const handleCreateAdvertisement = async (req, res) => {
   }
 };
 
+// get commission
+
+const handleGetCommissions = async (req, res) => {
+  try {
+    // ✅ Fetch salesmen
+    const salesmen = await Salesman.find().select(
+      "name mobileNumber email salesCommissionEarned"
+    );
+
+    const salesmenData = salesmen.map((s) => ({
+      id: s._id,
+      role: "Salesman",
+      name: s.name,
+      mobileNumber: s.mobileNumber,
+      email: s.email,
+      totalCommission:
+        s.salesCommissionEarned?.reduce(
+          (sum, entry) => sum + (entry.amount || 0),
+          0
+        ) || 0,
+    }));
+
+    // ✅ Fetch managers
+    const managers = await MarketingManager.find().select(
+      "name mobileNumber email commissions"
+    );
+
+    const managerData = managers.map((m) => ({
+      id: m._id,
+      role: "Manager",
+      name: m.name,
+      mobileNumber: m.mobileNumber,
+      email: m.email,
+      totalCommission:
+        m.commissions?.reduce((sum, entry) => sum + (entry.amount || 0), 0) ||
+        0,
+    }));
+
+    // ✅ Merge and send response
+    const result = [...salesmenData, ...managerData];
+    res.status(200).json(result);
+  } catch (err) {
+    console.error("Fetching commissions failed:", err.message);
+    res.status(500).json({ error: "Failed to fetch commissions" });
+  }
+};
+
+
 // Get All Advertisements
 const handleGetAdvertisements = async (req, res) => {
   try {
@@ -472,5 +520,6 @@ module.exports = {
   handleGetAdvertisements,
   unapprovedSalesmen,
   getAllMarketingManagers,
-  getAllSalesman
+  getAllSalesman,
+  handleGetCommissions
 };
