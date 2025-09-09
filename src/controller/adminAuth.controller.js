@@ -8,6 +8,8 @@ const SalesmanCommissionSettings = require("../models/salesmanCommisionSettings"
 const ManagerCommisionSettings = require("../models/managerCommisionSettings");
 const Advertisement = require("../models/Advertisement");
 const SalesmanModel = require("../models/Salesman.model");
+const cloudinary = require('cloudinary')
+const fs = require("fs");
 
 const handleAdminRegister = async (req, res) => {
   try {
@@ -431,22 +433,32 @@ const handleCreateAdvertisement = async (req, res) => {
       return res.status(400).json({ error: "Image file is required" });
     }
 
+    // Upload to Cloudinary
+    let imageUrl = null;
+    if (req.file) {
+      const result = await cloudinary.v2.uploader.upload(req.file.path, {
+        folder: "shops", // keep all ads images inside `shops`
+      });
+      imageUrl = result.secure_url;
+      fs.unlinkSync(req.file.path); // remove local temp file
+    }
+
     const newAd = new Advertisement({
       title,
-      image: req.file.originalname, // using the filename stored by your multer
+      image: imageUrl, // store Cloudinary URL
     });
 
     await newAd.save();
 
-    res
-      .status(201)
-      .json({ message: "Advertisement created successfully", ad: newAd });
+    res.status(201).json({
+      message: "Advertisement created successfully",
+      ad: newAd,
+    });
   } catch (err) {
     console.error("Advertisement creation failed:", err.message);
     res.status(500).json({ error: err.message });
   }
 };
-
 // get commission
 
 const handleGetCommissions = async (req, res) => {
