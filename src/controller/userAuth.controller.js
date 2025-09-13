@@ -104,40 +104,178 @@ const sendEmail = async (email, subject, message) => {
 
 
 
+// const handleUserRegistration = async (req, res) => {
+//   try {
+//     const { name, email, mobileNumber, state, password, pincode, place, locality } = req.body;
+
+//     // Check if user already exists
+//     const existingUser = await userModel.findOne({
+//       $or: [{ email }, { mobileNumber }],
+//     });
+
+//     if (existingUser) {
+//       return res.status(409).json({ message: "User with this email or mobile number already exists" });
+//     }
+
+//     // Hash password
+//     const hashedPassword = await bcrypt.hash(password, 10);
+
+//     // Create new user (fields not required, just saved if provided)
+//     const newUser = new userModel({
+//       name,
+//       email,
+//       mobileNumber,
+//       password: hashedPassword,
+//       state,
+//       pincode,
+//       place,
+//       locality,
+//       isVerified: true, // ✅ Mark as verified directly (since no OTP)
+//     });
+
+//     await newUser.save();
+
+//     // Generate token
+//     const token = jwt.sign(
+//       { id: newUser._id, email: newUser.email, mobileNumber: newUser.mobileNumber },
+//       process.env.JWT_SECRET,
+//       { expiresIn: "365d" }
+//     );
+
+//     return res.status(201).json({
+//       message: "User registered successfully",
+//       token,
+//       user: {
+//         id: newUser._id,
+//         name: newUser.name,
+//         email: newUser.email,
+//         mobileNumber: newUser.mobileNumber,
+//         state: newUser.state,
+//         pincode: newUser.pincode,
+//         place: newUser.place,
+//         locality: newUser.locality,
+//       },
+//     });
+//   } catch (err) {
+//     console.error("Registration error:", err);
+//     return res.status(500).json({ message: "Server error" });
+//   }
+// };
+
+
+// // will verify the otp here of the user registration and if user put the correct otp 
+// // so we make the user (isVerified = true) and return - token,user object
+// // and if provide the otp after expiry so it will delete the user record that you gave before generating otp
+// // and will ask you to register again and generate otp again and fill again here 
+// // but if user put the email (isverified = true) already so it will just say user already exists 
+// const OtpVerificationUserRegistration = async (req, res) => {
+//   try {
+//     const { email, otp } = req.body;
+
+//     if (!email || !otp) {
+//       return res.status(400).json({ message: "Email and OTP are required" });
+//     }
+
+//     const user = await userModel.findOne({ email });
+
+//     if (!user) {
+//       return res.status(404).json({ message: "User not found" });
+//     }
+
+//     // ✅ Condition 1: Already Verified
+//     // checking this condition so we dont delete any already verified user by mistake when somehow
+//     // accidently if someone provide the wrong email of someone who is already have an account on the app
+//     // so by this condition we will only delete the user record who failed to provide otp before expiry time
+//     // and that user (email) is not isVerified  
+//     if (user.isVerified === true) {
+//       return res.status(400).json({ message: "User already verified" });
+//     }
+
+//     // ✅ Condition 2: Wrong OTP
+//     if (user.otp !== otp) {
+//       return res.status(400).json({ message: "Invalid OTP" });
+//     }
+
+//     // ✅ Condition 3: Expired OTP
+//     if (Date.now() > user.otpExpiry) {
+
+//       // ⛔ deleting  the user record from the database if he failed to provide otp in the given time and will ask him to register again so he can generate and request otp on his email again 
+//       await userModel.deleteOne({ _id: user._id }); // ⛔ Safe to delete as not verified
+
+//       return res.status(400).json({ message: "OTP expired. Please register again." });
+//     }
+
+//     // ✅ Condition 4: Correct OTP and Still Valid
+//     user.isVerified = true;
+//     user.otp = null;
+//     user.otpExpiry = null;
+//     await user.save();
+
+//     const token = jwt.sign(
+//       { id: user._id, email: user.email, mobileNumber: user.mobileNumber },
+//       process.env.JWT_SECRET,
+//       { expiresIn: "365d" }
+//     );
+
+//     return res.status(200).json({
+//       message: "User verified successfully",
+//       token,
+//       user: {
+//         id: user._id,
+//         name: user.name,
+//         email: user.email,
+//         mobileNumber: user.mobileNumber,
+//         state: user.state,
+//         pincode: user.pincode,
+//         place: user.place,
+//         locality: user.locality,
+//       },
+//     });
+//   } catch (err) {
+//     console.error("OTP verification error:", err);
+//     return res.status(500).json({ message: "Server error" });
+//   }
+// };
+
+
+
 const handleUserRegistration = async (req, res) => {
   try {
-    const { name, email, mobileNumber, state, password, pincode, place, locality } = req.body;
+    const { name, mobileNumber, pincode, password, email, state, place, locality } = req.body;
 
-    // Check if user already exists
-    const existingUser = await userModel.findOne({
-      $or: [{ email }, { mobileNumber }],
-    });
-
-    if (existingUser) {
-      return res.status(409).json({ message: "User with this email or mobile number already exists" });
+    // ✅ Check mandatory fields
+    if (!name || !mobileNumber || !pincode || !password) {
+      return res.status(400).json({ message: "Name, Mobile Number, Pincode, and Password are required" });
     }
 
-    // Hash password
+    // ✅ Only check duplicate with mobileNumber (since email is optional)
+    const existingUser = await userModel.findOne({ mobileNumber });
+
+    if (existingUser) {
+      return res.status(409).json({ message: "User with this mobile number already exists" });
+    }
+
+    // ✅ Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create new user (fields not required, just saved if provided)
+    // ✅ Create user (optional fields added only if provided)
     const newUser = new userModel({
       name,
-      email,
       mobileNumber,
-      password: hashedPassword,
-      state,
       pincode,
-      place,
-      locality,
-      isVerified: true, // ✅ Mark as verified directly (since no OTP)
+      password: hashedPassword,
+      email: email || null,
+      state: state || null,
+      place: place || null,
+      locality: locality || null,
+      isVerified: true, // no OTP
     });
 
     await newUser.save();
 
-    // Generate token
+    // ✅ Generate token
     const token = jwt.sign(
-      { id: newUser._id, email: newUser.email, mobileNumber: newUser.mobileNumber },
+      { id: newUser._id, mobileNumber: newUser.mobileNumber },
       process.env.JWT_SECRET,
       { expiresIn: "365d" }
     );
@@ -148,91 +286,16 @@ const handleUserRegistration = async (req, res) => {
       user: {
         id: newUser._id,
         name: newUser.name,
-        email: newUser.email,
         mobileNumber: newUser.mobileNumber,
-        state: newUser.state,
         pincode: newUser.pincode,
+        email: newUser.email,
+        state: newUser.state,
         place: newUser.place,
         locality: newUser.locality,
       },
     });
   } catch (err) {
     console.error("Registration error:", err);
-    return res.status(500).json({ message: "Server error" });
-  }
-};
-
-
-// will verify the otp here of the user registration and if user put the correct otp 
-// so we make the user (isVerified = true) and return - token,user object
-// and if provide the otp after expiry so it will delete the user record that you gave before generating otp
-// and will ask you to register again and generate otp again and fill again here 
-// but if user put the email (isverified = true) already so it will just say user already exists 
-const OtpVerificationUserRegistration = async (req, res) => {
-  try {
-    const { email, otp } = req.body;
-
-    if (!email || !otp) {
-      return res.status(400).json({ message: "Email and OTP are required" });
-    }
-
-    const user = await userModel.findOne({ email });
-
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    // ✅ Condition 1: Already Verified
-    // checking this condition so we dont delete any already verified user by mistake when somehow
-    // accidently if someone provide the wrong email of someone who is already have an account on the app
-    // so by this condition we will only delete the user record who failed to provide otp before expiry time
-    // and that user (email) is not isVerified  
-    if (user.isVerified === true) {
-      return res.status(400).json({ message: "User already verified" });
-    }
-
-    // ✅ Condition 2: Wrong OTP
-    if (user.otp !== otp) {
-      return res.status(400).json({ message: "Invalid OTP" });
-    }
-
-    // ✅ Condition 3: Expired OTP
-    if (Date.now() > user.otpExpiry) {
-
-      // ⛔ deleting  the user record from the database if he failed to provide otp in the given time and will ask him to register again so he can generate and request otp on his email again 
-      await userModel.deleteOne({ _id: user._id }); // ⛔ Safe to delete as not verified
-
-      return res.status(400).json({ message: "OTP expired. Please register again." });
-    }
-
-    // ✅ Condition 4: Correct OTP and Still Valid
-    user.isVerified = true;
-    user.otp = null;
-    user.otpExpiry = null;
-    await user.save();
-
-    const token = jwt.sign(
-      { id: user._id, email: user.email, mobileNumber: user.mobileNumber },
-      process.env.JWT_SECRET,
-      { expiresIn: "365d" }
-    );
-
-    return res.status(200).json({
-      message: "User verified successfully",
-      token,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        mobileNumber: user.mobileNumber,
-        state: user.state,
-        pincode: user.pincode,
-        place: user.place,
-        locality: user.locality,
-      },
-    });
-  } catch (err) {
-    console.error("OTP verification error:", err);
     return res.status(500).json({ message: "Server error" });
   }
 };
@@ -428,7 +491,7 @@ const saveFcmTokenController = async (req, res) => {
 
 module.exports = { 
   handleUserRegistration,
-  OtpVerificationUserRegistration, 
+  // OtpVerificationUserRegistration, 
   handleUserLogin,
   sendOtpController,
   verifyOtpController,

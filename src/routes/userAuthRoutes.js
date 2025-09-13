@@ -10,7 +10,7 @@ const { handleUserRegistration,OtpVerificationUserRegistration ,handleUserLogin,
 router.post("/register",handleUserRegistration);
 
 // verify otp for user "registeration" 
-router.post("/verify-registration-otp",OtpVerificationUserRegistration);
+// router.post("/verify-registration-otp",OtpVerificationUserRegistration);
 
 // user login
 router.post("/login",handleUserLogin);
