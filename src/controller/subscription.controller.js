@@ -12,6 +12,7 @@ const {
 const Razorpay = require("razorpay");
 const crypto = require("crypto");
 const Shop = require("../models/storeModel");
+const generateInvoice = require("../service/invoice.service");
 
 // =================================================================================================
 // ============================== 🟢 HANDLE START OR EXTEND SUBSCRIPTION ============================
@@ -496,11 +497,31 @@ const verifyPayment = async (req, res) => {
       subscriptionPlanId
     );
 
-    return res.status(200).json({
-      success: true,
-      message: "Payment verified & subscription activated",
-      subscription,
-    });
+    
+// Fetch plan + shop for invoice
+const plan = await SubscriptionPlan.findById(subscriptionPlanId).lean();
+const shop = await Shop.findById(shopId).lean();
+
+// Generate shop-based invoice
+const invoicePath = await generateInvoice(
+  { id: razorpay_payment_id, order_id: razorpay_order_id },
+  subscription,
+  shop,
+  plan
+);
+
+return res.status(200).json({
+  success: true,
+  message: "Payment verified & subscription activated",
+  subscription,
+  invoiceUrl: `/invoices/${shopId}/${path.basename(invoicePath)}`,
+});
+
+    // return res.status(200).json({
+    //   success: true,
+    //   message: "Payment verified & subscription activated",
+    //   subscription,
+    // });
   } catch (err) {
     console.error("Payment verification failed:", err.message);
     return res
@@ -508,6 +529,9 @@ const verifyPayment = async (req, res) => {
       .json({ success: false, message: "Internal server error" });
   }
 };
+
+
+
 
 async function handleCheckSubscriptionStatus(req, res) {
   const userId = req.user.id;
