@@ -12,6 +12,7 @@ const {
 const Razorpay = require("razorpay");
 const crypto = require("crypto");
 const Shop = require("../models/storeModel");
+const invoiceModel = require("../models/invoiceModel");
 
 // =================================================================================================
 // ============================== 🟢 HANDLE START OR EXTEND SUBSCRIPTION ============================
@@ -467,45 +468,126 @@ const handleStartSubscription = async (req, res) => {
 };
 
 // ✅ 2. Verify payment → Activate subscription
+// const verifyPayment = async (req, res) => {
+//   const { razorpay_payment_id, razorpay_order_id, razorpay_signature } =
+//     req.body;
+
+//   try {
+//     const body = razorpay_order_id + "|" + razorpay_payment_id;
+
+//     const expectedSignature = crypto
+//       .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
+//       .update(body.toString())
+//       .digest("hex");
+
+//     if (expectedSignature !== razorpay_signature) {
+//       return res
+//         .status(400)
+//         .json({ success: false, message: "Invalid signature" });
+//     }
+
+//     // Fetch order to get notes
+//     const order = await razorpay.orders.fetch(razorpay_order_id);
+//     const { userId, shopId, subscriptionPlanId } = order.notes;
+
+//     // Call helper
+//     const subscription = await activateOrExtendSubscription(
+//       userId,
+//       shopId,
+//       subscriptionPlanId
+//     );
+
+//     return res.status(200).json({
+//       success: true,
+//       message: "Payment verified & subscription activated",
+//       subscription,
+//     });
+//   } catch (err) {
+//     console.error("Payment verification failed:", err.message);
+//     return res
+//       .status(500)
+//       .json({ success: false, message: "Internal server error" });
+//   }
+// };
+
+
+
 const verifyPayment = async (req, res) => {
   const { razorpay_payment_id, razorpay_order_id, razorpay_signature } =
     req.body;
 
   try {
+    // ✅ Verify signature
     const body = razorpay_order_id + "|" + razorpay_payment_id;
-
     const expectedSignature = crypto
       .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
       .update(body.toString())
       .digest("hex");
 
     if (expectedSignature !== razorpay_signature) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Invalid signature" });
+      return res.status(400).json({ success: false, message: "Invalid signature" });
     }
 
-    // Fetch order to get notes
+    // ✅ Fetch order (get notes)
     const order = await razorpay.orders.fetch(razorpay_order_id);
     const { userId, shopId, subscriptionPlanId } = order.notes;
 
-    // Call helper
-    const subscription = await activateOrExtendSubscription(
+    // ✅ Activate/extend subscription
+    const subscription = await activateOrExtendSubscription(userId, shopId, subscriptionPlanId);
+
+    // ✅ Fetch payment details
+    const payment = await razorpay.payments.fetch(razorpay_payment_id);
+
+    // ✅ Create invoice in Razorpay
+    const invoice = await razorpay.invoices.create({
+      type: "invoice",
+      description: `Subscription for plan ${subscriptionPlanId}`,
+      customer: {
+        name: payment.email || "Customer",
+        contact: payment.contact,
+        email: payment.email,
+      },
+      line_items: [
+        {
+          name: `Subscription Plan ${subscriptionPlanId}`,
+          amount: payment.amount,
+          currency: payment.currency,
+          quantity: 1,
+        },
+      ],
+      notes: {
+        userId,
+        shopId,
+        subscriptionPlanId,
+        subscriptionId: subscription._id.toString(),
+        paymentId: razorpay_payment_id,
+      },
+      sms_notify: 1,
+      email_notify: 1,
+    });
+
+    // ✅ Save invoice in DB
+    const savedInvoice = await invoiceModel.create({
+      razorpayInvoiceId: invoice.id,
       userId,
       shopId,
-      subscriptionPlanId
-    );
+      subscriptionId: subscription._id,
+      amount: payment.amount / 100, // convert paise to rupees
+      currency: payment.currency,
+      status: invoice.status,
+      invoiceUrl: invoice.short_url, // Razorpay hosted invoice link
+      notes: invoice.notes,
+    });
 
     return res.status(200).json({
       success: true,
-      message: "Payment verified & subscription activated",
+      message: "Payment verified, subscription activated, invoice generated",
       subscription,
+      invoice: savedInvoice,
     });
   } catch (err) {
     console.error("Payment verification failed:", err.message);
-    return res
-      .status(500)
-      .json({ success: false, message: "Internal server error" });
+    return res.status(500).json({ success: false, message: "Internal server error" });
   }
 };
 
