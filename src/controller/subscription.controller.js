@@ -533,7 +533,7 @@ const verifyPayment = async (req, res) => {
     const { userId, shopId, subscriptionPlanId } = order.notes;
 
     // ✅ Activate/extend subscription
-    const { subscription, plan } = await activateOrExtendSubscription(userId, shopId, subscriptionPlanId);
+    const subscription = await activateOrExtendSubscription(userId, shopId, subscriptionPlanId);
 
     // ✅ Fetch payment details
     const payment = await razorpay.payments.fetch(razorpay_payment_id);
@@ -543,7 +543,7 @@ const verifyPayment = async (req, res) => {
     // ✅ Create invoice in Razorpay
     const invoice = await razorpay.invoices.create({
       type: "invoice",
-  description: `Subscription for ${plan.name}`,   // ✅ use plan name
+      description: `Subscription for plan ${subscriptionPlanId}`,
       customer: {
         name: payment.email || "Customer",
         contact: payment.contact,
@@ -551,7 +551,7 @@ const verifyPayment = async (req, res) => {
       },
       line_items: [
         {
-      name: plan.name,   // ✅ use plan name here too
+          name: `Subscription Plan ${subscriptionPlanId}`,
           amount: payment.amount,
           currency: payment.currency,
           quantity: 1,
@@ -579,8 +579,6 @@ const verifyPayment = async (req, res) => {
       status: invoice.status,
       invoiceUrl: invoice.short_url, // Razorpay hosted invoice link
       notes: invoice.notes,
-        planName: plan.name,  // ✅ store plan name
-
     });
 
     return res.status(200).json({
