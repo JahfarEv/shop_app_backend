@@ -451,7 +451,8 @@ const handleStartSubscription = async (req, res) => {
       amount,
       currency: "INR",
       receipt: `receipt_${Date.now()}`,
-      notes: { userId, shopId, subscriptionPlanId },
+      notes: { userId, shopId, subscriptionPlanId, baseAmount: plan.amount, 
+        gstAmount: gstAmount.toFixed(2)  },
     };
 
     const order = await razorpay.orders.create(options);
