@@ -176,25 +176,25 @@ const handleCreateProduct = async (req, res) => {
     const allTokens = users.flatMap(user => user.fcmTokens);
 
     // ===================================== 🔔 SEND FCM NOTIFICATION ================================
-    let fcmSummary = {};
-    if (allTokens.length > 0) {
-      const message = {
-        notification: {
-          title: "🆕 New Product Added!",
-          body: `Introducing "${newProduct.name}". Check it out now!`,
-        },
-        tokens: allTokens,
-      };
+    // let fcmSummary = {};
+    // if (allTokens.length > 0) {
+    //   const message = {
+    //     notification: {
+    //       title: "🆕 New Product Added!",
+    //       body: `Introducing "${newProduct.name}". Check it out now!`,
+    //     },
+    //     tokens: allTokens,
+    //   };
 
-      const response = await admin.messaging().sendEachForMulticast(message);
-      fcmSummary = {
-        totalSent: allTokens.length,
-        successCount: response.successCount,
-        failureCount: response.failureCount,
-      };
-    } else {
-      info("No FCM tokens found. Notification not sent.");
-    }
+    //   const response = await admin.messaging().sendEachForMulticast(message);
+    //   fcmSummary = {
+    //     totalSent: allTokens.length,
+    //     successCount: response.successCount,
+    //     failureCount: response.failureCount,
+    //   };
+    // } else {
+    //   info("No FCM tokens found. Notification not sent.");
+    // }
 
     // ===================================== 💾 SAVE NOTIFICATION TO DB ==============================
     const notificationDoc = new Notification({
