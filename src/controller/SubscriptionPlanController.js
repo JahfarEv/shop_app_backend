@@ -89,12 +89,20 @@ async function createPlan(req, res) {
   try {
     const { name, durationType, durationValue, amount, description } = req.body;
 
+     // ===================================== 🧮 CALCULATE GST =========================================
+    const gstRate = 0.18;
+    const gstAmount = amount * gstRate;
+    const totalAmount = amount + gstAmount;
+    
     // ===================================== 💾 SAVE PLAN TO DATABASE ================================
     const plan = await SubscriptionPlan.create({
       name: name.trim(),
       durationType,       // ✅ monthly | yearly
       durationValue,      // ✅ how many months/years
-      amount,
+      // amount,
+      baseAmount: amount, // 💰 store base amount
+      gstAmount: gstAmount.toFixed(2), // 💸 store gst separately
+      totalAmount: totalAmount.toFixed(2), // 💵 store final price
       description: (description || "").trim(),
     });
 
@@ -137,14 +145,17 @@ async function createPlan(req, res) {
       data: {
         planId: plan._id,
         planName: plan.name,
-        amount: plan.amount,
+        baseAmount: plan.baseAmount,
+        gstAmount: plan.gstAmount,
+        totalAmount: plan.totalAmount,
       },
     });
 
     await notificationDoc.save();
 
     // ===================================== ✅ SEND SUCCESS RESPONSE ==================================
-    return res.status(201).json({ success: true, plan });
+    return res.status(201).json({ success: true, plan, gst: gstAmount.toFixed(2),
+      totalPayable: totalAmount.toFixed(2) });
 
   } catch (err) {
     // ===================================== ❌ ERROR HANDLING ========================================

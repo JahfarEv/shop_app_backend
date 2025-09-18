@@ -439,20 +439,16 @@ const handleStartSubscription = async (req, res) => {
       return res.status(404).json({ success: false, message: "Shop not found" });
     }
 
-       const gstRate = 0.18;
-    const gstAmount = plan.amount * gstRate;
-    const totalAmount = plan.amount + gstAmount;
+     
 
     // ✅ Convert to paise for Razorpay
-    const amount = Math.round(totalAmount * 100);
-    // const amount = plan.amount * 100; // Razorpay expects paise
+    const amount = plan.amount * 100; // Razorpay expects paise
 
     const options = {
       amount,
       currency: "INR",
       receipt: `receipt_${Date.now()}`,
-      notes: { userId, shopId, subscriptionPlanId, baseAmount: plan.amount, 
-        gstAmount: gstAmount.toFixed(2)  },
+      notes: { userId, shopId, subscriptionPlanId},
     };
 
     const order = await razorpay.orders.create(options);
@@ -465,8 +461,7 @@ const handleStartSubscription = async (req, res) => {
       currency: order.currency,
       plan,
   subscription: shop.subscription, // ✅ directly return subscription
-   gst: gstAmount.toFixed(2),
-      totalPayable: totalAmount.toFixed(2),
+  
       razorpayKey: process.env.RAZORPAY_KEY_ID, // ✅ send public key for frontend
     });
   } catch (err) {
