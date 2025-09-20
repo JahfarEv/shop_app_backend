@@ -562,7 +562,7 @@ const verifyPayment = async (req, res) => {
       line_items: [
         {
           name: `Subscription Plan ${subscriptionPlanId}`,
-          amount: payment.amount,
+          amount: payment.totalAmount,
           currency: payment.currency,
           quantity: 1,
         },
@@ -584,7 +584,7 @@ const verifyPayment = async (req, res) => {
       userId,
       shopId,
       subscriptionId: subscription._id,
-      amount: payment.amount / 100, // convert paise to rupees
+      amount: payment.totalAmount / 100, // convert paise to rupees
       currency: payment.currency,
       status: invoice.status,
       invoiceUrl: invoice.short_url, // Razorpay hosted invoice link
