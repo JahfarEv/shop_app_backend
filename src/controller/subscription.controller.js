@@ -420,6 +420,7 @@ const razorpay = new Razorpay({
 const handleStartSubscription = async (req, res) => {
   const userId = req.user?.id;
   const { shopId, subscriptionPlanId } = req.body;
+console.log(,userId,shopId,subscriptionPlanId,'data');
 
   try {
     const plan = await SubscriptionPlan.findById(subscriptionPlanId);
@@ -443,6 +444,7 @@ const handleStartSubscription = async (req, res) => {
 
     // ✅ Convert to paise for Razorpay
     const amount = plan.amount * 100; // Razorpay expects paise
+console.log(amount,'amount');
 
     const options = {
       amount,
@@ -452,6 +454,7 @@ const handleStartSubscription = async (req, res) => {
     };
 
     const order = await razorpay.orders.create(options);
+console.log(order, 'order');
 
     return res.status(200).json({
       success: true,
