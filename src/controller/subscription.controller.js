@@ -418,7 +418,7 @@ const razorpay = new Razorpay({
 
 // ✅ 1. Start subscription → Create Razorpay order
 const handleStartSubscription = async (req, res) => {
-  const userId = req.user.id;
+  const userId = req.user?.id;
   const { shopId, subscriptionPlanId } = req.body;
 
   try {
@@ -466,9 +466,11 @@ const handleStartSubscription = async (req, res) => {
     });
   } catch (err) {
     console.error("Failed to create Razorpay order:", err.message);
-    return res
-      .status(500)
-      .json({ success: false, message: "Internal server error" });
+     return res.status(500).json({
+      success: false,
+      message: "Failed to create Razorpay order",
+      error: err?.error || err?.message || err, // send meaningful error
+    });
   }
 };
 
