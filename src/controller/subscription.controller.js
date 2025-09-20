@@ -525,6 +525,7 @@ console.log(order, 'order');
 const verifyPayment = async (req, res) => {
   const { razorpay_payment_id, razorpay_order_id, razorpay_signature } =
     req.body;
+console.log(razorpay_payment_id, razorpay_order_id, razorpay_signature, 'raz');
 
   try {
     // ✅ Verify signature
