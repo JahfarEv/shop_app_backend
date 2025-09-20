@@ -1197,7 +1197,7 @@ else if (matchedManager) {
 // }
 
     // 🔔 Send FCM Notification
-    // const users = await userModel.find({ fcmTokens: { $exists: true, $ne: [] } });
+    const users = await userModel.find({ fcmTokens: { $exists: true, $ne: [] } });
     // const allTokens = users.flatMap((user) => user.fcmTokens);
     // let fcmResponse = null;
 
