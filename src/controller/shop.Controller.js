@@ -1198,19 +1198,19 @@ else if (matchedManager) {
 
     // 🔔 Send FCM Notification
     const users = await userModel.find({ fcmTokens: { $exists: true, $ne: [] } });
-    // const allTokens = users.flatMap((user) => user.fcmTokens);
-    // let fcmResponse = null;
+    const allTokens = users.flatMap((user) => user.fcmTokens);
+    let fcmResponse = null;
 
-    // if (allTokens.length > 0) {
-    //   const message = {
-    //     notification: {
-    //       title: "🛍️ New Shop Alert!",
-    //       body: `Check out new shop "${shopName}". Explore now!`,
-    //     },
-    //     tokens: allTokens,
-    //   };
-    //   fcmResponse = await admin.messaging().sendEachForMulticast(message);
-    // }
+    if (allTokens.length > 0) {
+      const message = {
+        notification: {
+          title: "🛍️ New Shop Alert!",
+          body: `Check out new shop "${shopName}". Explore now!`,
+        },
+        tokens: allTokens,
+      };
+      fcmResponse = await admin.messaging().sendEachForMulticast(message);
+    }
 
     // 💾 Save notification
     const notificationDoc = new Notification({
