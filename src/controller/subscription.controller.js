@@ -548,6 +548,7 @@ const verifyPayment = async (req, res) => {
     // ✅ Fetch payment details
     const payment = await razorpay.payments.fetch(razorpay_payment_id);
 
+console.log(payment,'payment');
 
     
     // ✅ Create invoice in Razorpay
@@ -562,7 +563,7 @@ const verifyPayment = async (req, res) => {
       line_items: [
         {
           name: `Subscription Plan ${subscriptionPlanId}`,
-          amount: payment.totalAmount,
+          amount: payment.amount,
           currency: payment.currency,
           quantity: 1,
         },
@@ -584,7 +585,7 @@ const verifyPayment = async (req, res) => {
       userId,
       shopId,
       subscriptionId: subscription._id,
-      amount: payment.totalAmount / 100, // convert paise to rupees
+      amount: payment.amount / 100, // convert paise to rupees
       currency: payment.currency,
       status: invoice.status,
       invoiceUrl: invoice.short_url, // Razorpay hosted invoice link
