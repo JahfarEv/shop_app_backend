@@ -42,7 +42,7 @@ const placeOrderController = async (req, res) => {
     // =============================================================================================
     const user = await User.findById(userId);
     const addressDoc = await DeliveryAddress.findOne({ userId });
-    console.log(addressDoc,'add');
+    console.log(user,'add');
     
 const selectedAddress = addressDoc?.addresses?.id(addressId);
 
@@ -125,7 +125,7 @@ const selectedAddress = addressDoc?.addresses?.id(addressId);
         <h3>💰 Total Order Amount: ₹${data.items.reduce((sum, i) => sum + i.priceWithQuantity, 0)}</h3>
       `;
 
-      await sendEmailToShopOwner(ownerEmail, "New Order from Cosysta", html);
+      await sendEmailToShopOwner(ownerEmail, "New Order from PoketStor", html);
     }
 
     // =============================================================================================
