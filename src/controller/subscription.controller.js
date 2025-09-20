@@ -420,7 +420,7 @@ const razorpay = new Razorpay({
 const handleStartSubscription = async (req, res) => {
   const userId = req.user?.id;
   const { shopId, subscriptionPlanId } = req.body;
-console.log(,userId,shopId,subscriptionPlanId,'data');
+console.log(userId,shopId,subscriptionPlanId,'data');
 
   try {
     const plan = await SubscriptionPlan.findById(subscriptionPlanId);
