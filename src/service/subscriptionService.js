@@ -8,7 +8,10 @@ async function activateOrExtendSubscription(userId, shopId, subscriptionPlanId) 
   const plan = await SubscriptionPlan.findById(subscriptionPlanId);
   if (!plan) throw new Error("Subscription plan not found");
 
-  const amount = plan.amount;
+  // const amount = plan.amount;
+
+const amount = plan.totalAmount;  // instead of plan.amount
+
   const now = moment().tz("Asia/Kolkata");
 
   let existingSubscription = await Subscription.findOne({ userId, shopId, status: "active" });
