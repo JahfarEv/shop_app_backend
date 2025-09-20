@@ -443,7 +443,7 @@ console.log(userId,shopId,subscriptionPlanId,'data');
      
 
     // ✅ Convert to paise for Razorpay
-    const amount = plan.amount * 100; // Razorpay expects paise
+    const amount = plan.totalAmount * 100; // Razorpay expects paise
 console.log(amount,'amount');
 
     const options = {
