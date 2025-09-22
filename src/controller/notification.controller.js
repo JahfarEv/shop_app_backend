@@ -37,7 +37,8 @@ const getSpecificRecipientandallNotifications = async (req, res) => {
 
     const notifications = await Notification.find({
       recipients: { $elemMatch: { userId, isRead: false } }
-    }).lean(); // lean = plain JS object
+    }).sort({ createdAt: -1 }) // ✅ latest first
+    .lean(); // lean = plain JS object
 
     const userNotifications = notifications.map((notif) => {
       const recipientData = notif.recipients.find(r => r.userId.toString() === userId);
