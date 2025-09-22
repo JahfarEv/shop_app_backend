@@ -371,17 +371,17 @@ if (ownerTokens.length > 0) {
     // 🔔 NOTIFY USER (Order Confirmation)
     // =============================================================================================
     const userNotification = new Notification({
-      title: "✅ Order Placed Successfully!",
-      body: `Your order #${order._id} has been placed on ${order.createdAt}.`,
-      type: "order_user",
-      recipients: [{ userId: userId, isRead: false }],
-      data: {
-        orderId: order._id,
-        totalAmount: totalCartAmount,
-        orderTime: order.createdAt,
-        deliveryAddress: selectedAddress,
-        items: populatedItems,
-      },
+      titleUser: "✅ Order Placed Successfully!",
+      bodyUser: `Your order #${order._id} has been placed on ${order.createdAt}.`,
+      // type: "order_user",
+      // recipients: [{ userId: userId, isRead: false }],
+      // data: {
+      //   orderId: order._id,
+      //   totalAmount: totalCartAmount,
+      //   orderTime: order.createdAt,
+      //   deliveryAddress: selectedAddress,
+      //   items: populatedItems,
+      // },
     });
     await userNotification.save();
 

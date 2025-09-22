@@ -2,6 +2,14 @@ const mongoose = require("mongoose");
 
 const notificationSchema = new mongoose.Schema(
   {
+    titleUser: {
+      type: String,
+      required: true, // Title of the notification shown to user
+    },
+    bodyUser: {
+      type: String,
+      required: true,
+    },
     title: {
       type: String,
       required: true, // Title of the notification shown to user
@@ -40,8 +48,6 @@ const notificationSchema = new mongoose.Schema(
 );
 
 module.exports = mongoose.model("Notification", notificationSchema);
-
-
 
 /* we are inserting notificaiton.save() and saving notification with user id in every controller whoes notification we need
 
