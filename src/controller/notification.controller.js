@@ -45,6 +45,8 @@ const getSpecificRecipientandallNotifications = async (req, res) => {
 
       return {
         _id: notif._id,
+        titleUser:notif.titleUser,
+        bodyUser:notif.bodyUser,
         title: notif.title,
         body: notif.body,
         type: notif.type,
