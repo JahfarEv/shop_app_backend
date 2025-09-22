@@ -6,6 +6,7 @@ const DeliveryAddress = require("../models/deliveryAddressmodel");
 const Notification = require("../models/notificationModel");
 const nodemailer = require("nodemailer");
 const admin = require("../config/admin");
+const cartModel = require("../models/cart");
 
 require("dotenv").config();
 
@@ -147,6 +148,21 @@ const selectedAddress = addressDoc?.addresses?.id(addressId);
     });
 
     await order.save();
+
+
+    // =============================================================================================
+// 🗑️ CLEAR USER CART
+// =============================================================================================
+await cartModel.findOneAndUpdate(
+  { userId },
+  {
+    $set: {
+      items: [],
+      totalCartPrice: 0,
+    },
+  },
+  { new: true }
+);
 
     // =============================================================================================
     // 🔻 UPDATE PRODUCT STOCK AFTER ORDER
