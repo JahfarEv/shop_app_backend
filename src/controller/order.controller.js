@@ -43,10 +43,9 @@ const placeOrderController = async (req, res) => {
     // =============================================================================================
     const user = await User.findById(userId);
     const addressDoc = await DeliveryAddress.findOne({ userId });
-    console.log(user,'add');
-    
-const selectedAddress = addressDoc?.addresses?.id(addressId);
+    console.log(user, "add");
 
+    const selectedAddress = addressDoc?.addresses?.id(addressId);
 
     if (!selectedAddress) {
       return res.status(404).json({ message: "Address not found" });
@@ -113,17 +112,28 @@ const selectedAddress = addressDoc?.addresses?.id(addressId);
         </p>
 
         <h3>🧾 Ordered Products</h3>
-        ${data.items.map(i => `
+        ${data.items
+          .map(
+            (i) => `
           <p>
             <strong>Product Name:</strong> ${i.name}<br>
             <strong>Product Price (per unit):</strong> ₹${i.price}<br>
             <strong>Quantity:</strong> ${i.quantity}<br>
-            ${i.weightInGrams ? `<strong>Weight:</strong> ${i.weightInGrams} grams<br>` : ""}
+            ${
+              i.weightInGrams
+                ? `<strong>Weight:</strong> ${i.weightInGrams} grams<br>`
+                : ""
+            }
             <strong>Total for this product:</strong> ₹${i.priceWithQuantity}
           </p><hr>
-        `).join("")}
+        `
+          )
+          .join("")}
 
-        <h3>💰 Total Order Amount: ₹${data.items.reduce((sum, i) => sum + i.priceWithQuantity, 0)}</h3>
+        <h3>💰 Total Order Amount: ₹${data.items.reduce(
+          (sum, i) => sum + i.priceWithQuantity,
+          0
+        )}</h3>
       `;
 
       await sendEmailToShopOwner(ownerEmail, "New Order from PoketStor", html);
@@ -135,7 +145,7 @@ const selectedAddress = addressDoc?.addresses?.id(addressId);
     const order = new Order({
       userId,
       address: selectedAddress,
-      items: populatedItems.map(i => ({
+      items: populatedItems.map((i) => ({
         productId: i.productId,
         name: i.name,
         price: i.price,
@@ -149,20 +159,19 @@ const selectedAddress = addressDoc?.addresses?.id(addressId);
 
     await order.save();
 
-
     // =============================================================================================
-// 🗑️ CLEAR USER CART
-// =============================================================================================
-await cartModel.findOneAndUpdate(
-  { userId },
-  {
-    $set: {
-      items: [],
-      totalCartPrice: 0,
-    },
-  },
-  { new: true }
-);
+    // 🗑️ CLEAR USER CART
+    // =============================================================================================
+    await cartModel.findOneAndUpdate(
+      { userId },
+      {
+        $set: {
+          items: [],
+          totalCartPrice: 0,
+        },
+      },
+      { new: true }
+    );
 
     // =============================================================================================
     // 🔻 UPDATE PRODUCT STOCK AFTER ORDER
@@ -175,22 +184,22 @@ await cartModel.findOneAndUpdate(
 
       if (type === "per kg") {
         // ➕ Calculate total grams to reduce from stock
-        let totalGrams = item.weightInGrams      // // If weight in grams is given (e.g., 250g), then:
-          ? item.weightInGrams * item.quantity  // // Multiply weightInGrams × quantity (e.g., 250g × 2 = 500g)
-          : item.quantity * 1000;               // If not given, assume 1 quantity = 1kg → convert to grams (e.g., 2 × 1000 = 2000g)
-                                                // ℹitem.quantity here means how much user is buying
-                                                  //    (not the stock in product model, which is handled separately)
-         
-// item.quantity in order is different it is the quantity user wants to buy and it can be the quantity of grams packet too e.g- 250 grams * 2 quantity = 500 grams
-// product.quantity is different it is the product available stock that shop owner has , we are reducing this with the help of calculating ( item.quantity )
-// 🔴🔴🔴 if order item comes in grams which is less than 1kg and cant be taken as 1 full quantity
-// 🔴🔴🔴 so we have to caluculate and reduct product quantity i.e stock according to grams also
-// 🔴🔴🔴 example product quantity = 9.75  if we buy 250 grams from the product quanatiy available in = 10 so it will be calculated as 9.75 
-//  1 kg = 1 quantity here  , 1 unit = 1 quantity , 1 pack = 1 quantity  this quantity is not order item quantity this is present in prodoct model it tells us about the product stock availabe to sell..
-// but in kg 'only' user can give the weight in grams and we have to calculate when it will be 1 quantity(stock) 
-// in other product type we dont need to calculate we can directly reduce
-//  the product quantity(stock) in product model - cz (1 item.quantity = 1 product.quantity i.e (stock) ) 
-                                                  
+        let totalGrams = item.weightInGrams // // If weight in grams is given (e.g., 250g), then:
+          ? item.weightInGrams * item.quantity // // Multiply weightInGrams × quantity (e.g., 250g × 2 = 500g)
+          : item.quantity * 1000; // If not given, assume 1 quantity = 1kg → convert to grams (e.g., 2 × 1000 = 2000g)
+        // ℹitem.quantity here means how much user is buying
+        //    (not the stock in product model, which is handled separately)
+
+        // item.quantity in order is different it is the quantity user wants to buy and it can be the quantity of grams packet too e.g- 250 grams * 2 quantity = 500 grams
+        // product.quantity is different it is the product available stock that shop owner has , we are reducing this with the help of calculating ( item.quantity )
+        // 🔴🔴🔴 if order item comes in grams which is less than 1kg and cant be taken as 1 full quantity
+        // 🔴🔴🔴 so we have to caluculate and reduct product quantity i.e stock according to grams also
+        // 🔴🔴🔴 example product quantity = 9.75  if we buy 250 grams from the product quanatiy available in = 10 so it will be calculated as 9.75
+        //  1 kg = 1 quantity here  , 1 unit = 1 quantity , 1 pack = 1 quantity  this quantity is not order item quantity this is present in prodoct model it tells us about the product stock availabe to sell..
+        // but in kg 'only' user can give the weight in grams and we have to calculate when it will be 1 quantity(stock)
+        // in other product type we dont need to calculate we can directly reduce
+        //  the product quantity(stock) in product model - cz (1 item.quantity = 1 product.quantity i.e (stock) )
+
         const currentStockInGrams = product.quantity * 1000; // Convert current stock to grams
         const newStockInGrams = currentStockInGrams - totalGrams;
 
@@ -217,17 +226,15 @@ await cartModel.findOneAndUpdate(
 
       if (type === "per kg") {
         //  Calculate total grams sold
-       let totalGrams = item.weightInGrams          // If weight in grams is given (e.g., 250g), then:
-       ? item.weightInGrams * item.quantity         // Multiply weightInGrams × quantity (e.g., 250g × 2 = 500g)
-       : item.quantity * 1000;                      // If not given, assume 1 quantity = 1kg → convert to grams (e.g., 2 × 1000 = 2000g)
-                                                  // ℹitem.quantity here means how much user is buying
-                                                  //    (not the stock in product model, which is handled separately)
+        let totalGrams = item.weightInGrams // If weight in grams is given (e.g., 250g), then:
+          ? item.weightInGrams * item.quantity // Multiply weightInGrams × quantity (e.g., 250g × 2 = 500g)
+          : item.quantity * 1000; // If not given, assume 1 quantity = 1kg → convert to grams (e.g., 2 × 1000 = 2000g)
+        // ℹitem.quantity here means how much user is buying
+        //    (not the stock in product model, which is handled separately)
 
-//  1 kg = 1 quantity here  , 1 unit = 1 quantity , 1 pack = 1 sold 
-// but in kg 'only' user can give the weight in grams and we have to calculate when it will be 1 sold 
-// in other product type we dont need to calculate we can directly include there ordered quantity as sold
-
-
+        //  1 kg = 1 quantity here  , 1 unit = 1 quantity , 1 pack = 1 sold
+        // but in kg 'only' user can give the weight in grams and we have to calculate when it will be 1 sold
+        // in other product type we dont need to calculate we can directly include there ordered quantity as sold
 
         const soldInKg = totalGrams / 1000; // Convert grams to kg
         product.sold += soldInKg; // Add to sold field
@@ -242,156 +249,143 @@ await cartModel.findOneAndUpdate(
     // =============================================================================================
     // 🔔 SAVE NOTIFICATION TO DATABASE OF ORDERS FOR SHOP OWNERS
     // =============================================================================================
-    const uniqueShopIds = [...new Set(populatedItems.map(i => i.shop._id.toString()))];
+    const uniqueShopIds = [
+      ...new Set(populatedItems.map((i) => i.shop._id.toString())),
+    ];
     const shops = await Shop.find({ _id: { $in: uniqueShopIds } });
 
-   console.log(shops,'shops');
-   
+    console.log(shops, "shops");
 
-   for (let shop of shops) {
-  const data = shopWiseMap.get(shop._id.toString());
-  if (!data) continue; // safety check
+    for (let shop of shops) {
+      const data = shopWiseMap.get(shop._id.toString());
+      if (!data) continue; // safety check
 
-  const fullDetails = {
-    customer: {
-      name: user.name,
-      email: user.email,
-      phone: selectedAddress.phoneNumber,
-    },
-    address: {
-      country: selectedAddress.countryName,
-      state: selectedAddress.state,
-      town: selectedAddress.town,
-      area: selectedAddress.area,
-      landmark: selectedAddress.landmark || "N/A",
-      pincode: selectedAddress.pincode,
-      houseNo: selectedAddress.houseNo || "N/A",
-    },
-    items: data.items.map(i => ({
-      name: i.name,
-      price: i.price,
-      quantity: i.quantity,
-      weightInGrams: i.weightInGrams || null,
-      priceWithQuantity: i.priceWithQuantity,
-    })),
-    totalAmount: data.items.reduce((sum, i) => sum + i.priceWithQuantity, 0),
-    orderTime: order.createdAt,
-  };
+      const fullDetails = {
+        customer: {
+          name: user.name,
+          email: user.email,
+          phone: selectedAddress.phoneNumber,
+        },
+        address: {
+          country: selectedAddress.countryName,
+          state: selectedAddress.state,
+          town: selectedAddress.town,
+          area: selectedAddress.area,
+          landmark: selectedAddress.landmark || "N/A",
+          pincode: selectedAddress.pincode,
+          houseNo: selectedAddress.houseNo || "N/A",
+        },
+        items: data.items.map((i) => ({
+          name: i.name,
+          price: i.price,
+          quantity: i.quantity,
+          weightInGrams: i.weightInGrams || null,
+          priceWithQuantity: i.priceWithQuantity,
+        })),
+        totalAmount: data.items.reduce(
+          (sum, i) => sum + i.priceWithQuantity,
+          0
+        ),
+        orderTime: order.createdAt,
+      };
 
-  // Save notification
-  const notificationDoc = new Notification({
-    title: "🛒 New Order Alert!",
-    body: `🎉 You received a new order from ${user.name} on ${order.createdAt}.`,
-    type: "order",
-    recipients: [
-      {
-        userId: shop.owner,
-        isRead: false,
-      },
-    ],
-    data: {
-      orderId: order._id,
-      shopId: shop._id,
-      userName: user.name,
-      orderTime: order.createdAt,
-      fullDetails,
-    },
-  });
-  await notificationDoc.save();
+      // Save notification
+      const notificationDoc = new Notification({
+        titleUser: "✅ Order Placed Successfully!",
+        bodyUser: `Your order #${order._id} has been placed on ${order.createdAt}.`,
+        title: "🛒 New Order Alert!",
+        body: `🎉 You received a new order from ${user.name} on ${order.createdAt}.`,
+        type: "order",
+        recipients: [
+          {
+            userId: shop.owner,
+            isRead: false,
+          },
+        ],
+        data: {
+          orderId: order._id,
+          shopId: shop._id,
+          userName: user.name,
+          orderTime: order.createdAt,
+          fullDetails,
+        },
+      });
+      await notificationDoc.save();
 
-  // Get shop owner
-  const shopOwner = await User.findById(shop.owner);
-  const ownerTokens = shopOwner?.fcmTokens || [];
+      // Get shop owner
+      const shopOwner = await User.findById(shop.owner);
+      const ownerTokens = shopOwner?.fcmTokens || [];
 
-  // if (ownerTokens.length > 0) {
-  //   const fcmMessage = {
-  //     notification: {
-  //       title: "🛒 New Order Received!",
-  //       body: `You have a new order from ${user.name}. Total ₹${fullDetails.totalAmount}`,
-  //     },
-  //     data: {
-  //       orderId: order._id.toString(),
-  //       shopId: shop._id.toString(),
-  //     },
-  //     tokens: ownerTokens,
-  //   };
+      // if (ownerTokens.length > 0) {
+      //   const fcmMessage = {
+      //     notification: {
+      //       title: "🛒 New Order Received!",
+      //       body: `You have a new order from ${user.name}. Total ₹${fullDetails.totalAmount}`,
+      //     },
+      //     data: {
+      //       orderId: order._id.toString(),
+      //       shopId: shop._id.toString(),
+      //     },
+      //     tokens: ownerTokens,
+      //   };
 
-  //   try {
-  //     const fcmResponse = await admin.messaging().sendEachForMulticast(fcmMessage);
-  //     console.log(
-  //       `✅ FCM Sent to ${shop.shopName}: Success=${fcmResponse.successCount}, Failures=${fcmResponse.failureCount}`
-  //     );
-  //   } catch (err) {
-  //     console.error("❌ Error sending FCM to shop owner:", err);
-  //   }
-  // }
+      //   try {
+      //     const fcmResponse = await admin.messaging().sendEachForMulticast(fcmMessage);
+      //     console.log(
+      //       `✅ FCM Sent to ${shop.shopName}: Success=${fcmResponse.successCount}, Failures=${fcmResponse.failureCount}`
+      //     );
+      //   } catch (err) {
+      //     console.error("❌ Error sending FCM to shop owner:", err);
+      //   }
+      // }
 
+      if (ownerTokens.length > 0) {
+        // Build item list with quantity + unit
+        const itemsList = fullDetails.items
+          .map((i) => {
+            let unit = "";
+            if (i.weightInGrams) {
+              unit = `${i.weightInGrams}g`; // you can also convert to kg if > 1000
+            } else {
+              unit = "pcs"; // fallback unit
+            }
+            return `item name: ${i.name} item quantitty: ${i.quantity} (${unit})`;
+          })
+          .join(", "); // or use "\n" for multi-line
 
-if (ownerTokens.length > 0) {
-  // Build item list with quantity + unit
-  const itemsList = fullDetails.items
-    .map(i => {
-      let unit = "";
-      if (i.weightInGrams) {
-        unit = `${i.weightInGrams}g`; // you can also convert to kg if > 1000
-      } else {
-        unit = "pcs"; // fallback unit
+        const fcmMessage = {
+          notification: {
+            title: "🛒 New Order Received!",
+            body: `New order from ${fullDetails.customer.name}. Total ₹${fullDetails.totalAmount}. Items: ${itemsList}`,
+          },
+          data: {
+            orderId: order._id.toString(),
+            shopId: shop._id.toString(),
+          },
+          tokens: ownerTokens,
+        };
+
+        try {
+          const fcmResponse = await admin
+            .messaging()
+            .sendEachForMulticast(fcmMessage);
+          console.log(
+            `✅ FCM Sent to ${shop.shopName}: Success=${fcmResponse.successCount}, Failures=${fcmResponse.failureCount}`
+          );
+        } catch (err) {
+          console.error("❌ Error sending FCM to shop owner:", err);
+        }
       }
-      return `item name: ${i.name} item quantitty: ${i.quantity} (${unit})`;
-    })
-    .join(", "); // or use "\n" for multi-line
+    }
 
-  const fcmMessage = {
-    notification: {
-      title: "🛒 New Order Received!",
-      body: `New order from ${fullDetails.customer.name}. Total ₹${fullDetails.totalAmount}. Items: ${itemsList}`,
-    },
-    data: {
-      orderId: order._id.toString(),
-      shopId: shop._id.toString(),
-    },
-    tokens: ownerTokens,
-  };
-
-  try {
-    const fcmResponse = await admin.messaging().sendEachForMulticast(fcmMessage);
-    console.log(
-      `✅ FCM Sent to ${shop.shopName}: Success=${fcmResponse.successCount}, Failures=${fcmResponse.failureCount}`
-    );
+    // Response after loop
+    res.status(200).json({ message: "Order placed successfully", order });
   } catch (err) {
-    console.error("❌ Error sending FCM to shop owner:", err);
+    console.error("Order error:", err.message);
+    res
+      .status(500)
+      .json({ message: "Failed to place order", error: err.message });
   }
-}
-
-
-}
-
-
-// =============================================================================================
-    // 🔔 NOTIFY USER (Order Confirmation)
-    // =============================================================================================
-    const userNotification = new Notification({
-      titleUser: "✅ Order Placed Successfully!",
-      bodyUser: `Your order #${order._id} has been placed on ${order.createdAt}.`,
-      // type: "order_user",
-      // recipients: [{ userId: userId, isRead: false }],
-      // data: {
-      //   orderId: order._id,
-      //   totalAmount: totalCartAmount,
-      //   orderTime: order.createdAt,
-      //   deliveryAddress: selectedAddress,
-      //   items: populatedItems,
-      // },
-    });
-    await userNotification.save();
-
-// Response after loop
-res.status(200).json({ message: "Order placed successfully", order });
-} catch (err) {
-  console.error("Order error:", err.message);
-  res.status(500).json({ message: "Failed to place order", error: err.message });
-}
-
 };
 
 //     for (let [shopId, data] of shopWiseMap.entries()) {
@@ -447,17 +441,15 @@ res.status(200).json({ message: "Order placed successfully", order });
 //   await notificationDoc.save();
 // }
 
-
-    // =============================================================================================
-    // ✅ RESPONSE
-    // =============================================================================================
+// =============================================================================================
+// ✅ RESPONSE
+// =============================================================================================
 //     res.status(200).json({ message: "Order placed successfully", order });
 //   } catch (err) {
 //     console.error("Order error:", err.message);
 //     res.status(500).json({ message: "Failed to place order", error: err.message });
 //   }
 // };
-
 
 // get api for the order summary | about the orders user has given and when he will click on them we will send the product details from another api..
 const handleGetUserOrdersSummary = async (req, res) => {
@@ -494,7 +486,6 @@ const handleGetUserOrdersSummary = async (req, res) => {
   }
 };
 
-
 // in this controller we will show the whole order detail when we click on order - so we can see the whole product details
 
 const UserOrderProductsDetails = async (req, res) => {
@@ -517,7 +508,10 @@ const UserOrderProductsDetails = async (req, res) => {
           productPrice: item.price !== undefined ? item.price : "N/A", // ✅ from order
           quantityBought: item.quantity || "N/A",
           weightInGrams: item.weightInGrams || null,
-          totalPrice: item.priceWithQuantity !== undefined ? item.priceWithQuantity : "N/A", // ✅ from order
+          totalPrice:
+            item.priceWithQuantity !== undefined
+              ? item.priceWithQuantity
+              : "N/A", // ✅ from order
           shopName: shop?.shopName || "Shop Deleted",
           shopEmail: shop?.email || "N/A",
           // shopMobile: shop?.mobileNumber || "N/A",
@@ -542,21 +536,13 @@ const UserOrderProductsDetails = async (req, res) => {
   }
 };
 
-
-
-
 module.exports = {
   placeOrderController,
   handleGetUserOrdersSummary,
-  UserOrderProductsDetails
+  UserOrderProductsDetails,
 };
 
-
-
-
-
 // -- ----- working order place controller before the product stock and sold calculations ------------------------
-
 
 // const placeOrderController = async (req, res) => {
 //   try {
@@ -709,20 +695,13 @@ module.exports = {
 //   }
 // };
 
-
-
-
 //------- end of working order place controller before the product stock and sold calculations -----------------------------
-
 
 //----------------------------------------------------------------------------------------------------
 //---------------------------------------------------------------------------------------------------
 //------------------------------------------------------------------------------------------------
 
-
-
 //------------ ----------- previous developer code not mine and not useful right now------------------
-
 
 // const orderService = require("../service/order.service");
 // const { info, error, debug } = require("../middleware/logger");
@@ -773,7 +752,7 @@ module.exports = {
 //   try {
 //     const { orderId } = req.params;
 //     const userId = req.user.id;
-    
+
 //     debug(`Fetching order by ID - OrderID: ${orderId}, User: ${userId}`);
 
 //     const order = await orderService.getOrderById(orderId);
@@ -801,10 +780,10 @@ module.exports = {
 
 // const handleGetUserOrders = async (req, res) => {
 //   try {
-//     const authUserId = req.user.id.toString(); 
-//     const authUserRole = req.user.role; 
+//     const authUserId = req.user.id.toString();
+//     const authUserRole = req.user.role;
 //     const requestedUserId = req.params.userId || authUserId;
-    
+
 //     debug(`Fetching user orders - RequestedUserID: ${requestedUserId}, AuthUserID: ${authUserId}, Role: ${authUserRole}`);
 
 //     if (authUserId !== requestedUserId && authUserRole !== "admin") {
@@ -839,7 +818,7 @@ module.exports = {
 //   try {
 //     const orderId = req.params.id;
 //     const { status } = req.body;
-    
+
 //     debug(`Updating order status - OrderID: ${orderId}, Status: ${status}, User: ${req.user.id}, Role: ${req.user.role}`);
 
 //     // if (req.user.role !== 'admin' && req.user.role !== 'staff') {
@@ -868,7 +847,7 @@ module.exports = {
 //   try {
 //     const orderId = req.params.id;
 //     const { paymentStatus } = req.body;
-    
+
 //     debug(`Updating payment status - OrderID: ${orderId}, PaymentStatus: ${paymentStatus}, User: ${req.user.id}, Role: ${req.user.role}`);
 
 //     // Only admin or authorized staff can update payment status
@@ -900,9 +879,9 @@ module.exports = {
 // const handleDeleteOrder = async (req, res) => {
 //   try {
 //     const orderId = req.params.id;
-    
+
 //     debug(`Order deletion attempt - OrderID: ${orderId}, User: ${req.user.id}, Role: ${req.user.role}`);
-    
+
 //     if (req.user.role !== "admin") {
 //       info(`Unauthorized delete attempt - OrderID: ${orderId}, User: ${req.user.id}, Role: ${req.user.role}`);
 //       return res.status(403).json({
