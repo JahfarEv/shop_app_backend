@@ -2,14 +2,7 @@ const mongoose = require("mongoose");
 
 const notificationSchema = new mongoose.Schema(
   {
-    titleUser: {
-      type: String,
-      required: true, // Title of the notification shown to user
-    },
-    bodyUser: {
-      type: String,
-      required: true,
-    },
+   
     title: {
       type: String,
       required: true, // Title of the notification shown to user

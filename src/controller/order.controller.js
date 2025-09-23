@@ -291,8 +291,6 @@ const placeOrderController = async (req, res) => {
 
       // Save notification
       const notificationDoc = new Notification({
-        titleUser: "✅ Order Placed Successfully!",
-        bodyUser: `Your order #${order._id} has been placed on ${order.createdAt}.`,
         title: "🛒 New Order Alert!",
         body: `🎉 You received a new order from ${user.name} on ${order.createdAt}.`,
         type: "order",
