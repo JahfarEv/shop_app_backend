@@ -291,6 +291,7 @@ const placeOrderController = async (req, res) => {
 
       // Save notification
       const notificationDoc = new Notification({
+      
         title: "🛒 New Order Alert!",
         body: `🎉 You received a new order from ${user.name} on ${order.createdAt}.`,
         type: "order",
@@ -310,6 +311,31 @@ const placeOrderController = async (req, res) => {
       });
       await notificationDoc.save();
 
+
+
+      const userNotification = new Notification({
+  title: "✅ Order Placed Successfully!",
+  body: `Your order of ₹${totalCartAmount} with ${populatedItems.length} item(s) has been placed successfully.`,
+  type: "order",
+  recipients: [
+    {
+      userId: userId, // current logged-in user
+      isRead: false,
+    },
+  ],
+  data: {
+    orderId: order._id,
+    totalAmount: totalCartAmount,
+    orderTime: order.createdAt,
+    items: populatedItems.map((i) => ({
+      name: i.name,
+      quantity: i.quantity,
+      weightInGrams: i.weightInGrams || null,
+      priceWithQuantity: i.priceWithQuantity,
+    })),
+  },
+});
+await userNotification.save();
       // Get shop owner
       const shopOwner = await User.findById(shop.owner);
       const ownerTokens = shopOwner?.fcmTokens || [];
