@@ -10,8 +10,16 @@ const addToCartController = async (req, res) => {
     const userId = req.user.id;
 
     // 🔍 Check if product exists
-    const product = await productModel.findById(productId);
+    const product = await productModel.findById(productId).populate("shop");
     if (!product) return res.status(404).json({ message: 'Product not found' });
+console.log(product,'product');
+
+// ✅ Check if product's shop belongs to the current user
+    if (product.shop && product.shop.owner.toString() === userId) {
+      return res.status(403).json({
+        message: "You cannot add your own shop’s product to the cart.",
+      });
+    }
 
     const productPrice = product.price;
     const totalProductPrice = productPrice * quantity;
