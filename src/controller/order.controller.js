@@ -35,6 +35,8 @@ const sendEmailToShopOwner = async (shopEmail, subject, htmlContent) => {
 // =================================================================================================
 const placeOrderController = async (req, res) => {
   try {
+        console.log("🚀 Starting placeOrderController...");
+
     const { items, addressId, totalCartAmount } = req.body;
     const userId = req.user.id;
 
@@ -54,6 +56,8 @@ const placeOrderController = async (req, res) => {
     // =============================================================================================
     // 📦 Get full product and shop details for each item
     // =============================================================================================
+        console.log("Step 2: Populating items...");
+
     const populatedItems = await Promise.all(
       items.map(async (item) => {
         const product = await Product.findById(item.productId);
@@ -75,6 +79,8 @@ const placeOrderController = async (req, res) => {
     // =============================================================================================
     // 🗂️ Group all items shop-wise (so we know which shop gets which products)
     // =============================================================================================
+        console.log("Step 3: Grouping items by shop...");
+
     const shopWiseMap = new Map();
     populatedItems.forEach((item) => {
       const shopId = item.shop._id.toString();
@@ -90,6 +96,8 @@ const placeOrderController = async (req, res) => {
     // =============================================================================================
     // 📧 SEND EMAILS TO SHOP OWNERS
     // =============================================================================================
+        console.log("Step 4: Sending emails...");
+
     for (let [shopId, data] of shopWiseMap.entries()) {
       const ownerEmail = data.shop.email;
 
@@ -142,6 +150,8 @@ const placeOrderController = async (req, res) => {
     // =============================================================================================
     // 📝 SAVE ORDER TO DB
     // =============================================================================================
+        console.log("Step 5: Saving order...");
+
     const order = new Order({
       userId,
       address: selectedAddress,
@@ -162,6 +172,8 @@ const placeOrderController = async (req, res) => {
     // =============================================================================================
     // 🗑️ CLEAR USER CART
     // =============================================================================================
+        console.log("Step 6: Clearing user cart...");
+
     await cartModel.findOneAndUpdate(
       { userId },
       {
@@ -176,6 +188,8 @@ const placeOrderController = async (req, res) => {
     // =============================================================================================
     // 🔻 UPDATE PRODUCT STOCK AFTER ORDER
     // =============================================================================================
+        console.log("Step 7: Updating stock...");
+
     for (let item of populatedItems) {
       const product = await Product.findById(item.productId);
       if (!product) continue;
@@ -218,6 +232,8 @@ const placeOrderController = async (req, res) => {
     // =============================================================================================
     // 📈 UPDATE PRODUCT SOLD QUANTITY
     // =============================================================================================
+        console.log("Step 8: Updating sold quantities...");
+
     for (let item of populatedItems) {
       const product = await Product.findById(item.productId);
       if (!product) continue;
@@ -249,6 +265,8 @@ const placeOrderController = async (req, res) => {
     // =============================================================================================
     // 🔔 SAVE NOTIFICATION TO DATABASE OF ORDERS FOR SHOP OWNERS
     // =============================================================================================
+        console.log("Step 9: Creating notifications...");
+
     const uniqueShopIds = [
       ...new Set(populatedItems.map((i) => i.shop._id.toString())),
     ];
@@ -337,6 +355,8 @@ const placeOrderController = async (req, res) => {
 });
 await userNotification.save();
       // Get shop owner
+            console.log("Step 10: Sending FCM push...");
+
       const shopOwner = await User.findById(shop.owner);
       const ownerTokens = shopOwner?.fcmTokens || [];
 
@@ -403,6 +423,8 @@ await userNotification.save();
     }
 
     // Response after loop
+        console.log("🎉 Step 11: Returning success response...");
+
     res.status(200).json({ message: "Order placed successfully", order });
   } catch (err) {
     console.error("Order error:", err.message);
