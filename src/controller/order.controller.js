@@ -98,54 +98,122 @@ const placeOrderController = async (req, res) => {
     // =============================================================================================
         console.log("Step 4: Sending emails...");
 
-    for (let [shopId, data] of shopWiseMap.entries()) {
-      const ownerEmail = data.shop.email;
+// =============================================================================================
+// 📧 SEND EMAILS TO SHOP OWNERS
+// =============================================================================================
+console.log("Step 4: Sending emails...");
 
-      const html = `
-        <h2>🛒 New Order Received</h2>
-        <h3>👤 Customer Details</h3>
-        <p><strong>Name:</strong> ${user.name}</p>
-        <p><strong>Email:</strong> ${user.email}</p>
-        <p><strong>Mobile:</strong> ${selectedAddress.phoneNumber}</p>
+for (let [shopId, data] of shopWiseMap.entries()) {
+  try {
+    const ownerEmail = data.shop.email;
 
-        <h3>📦 Delivery Address</h3>
+    const html = `
+      <h2>🛒 New Order Received</h2>
+      <h3>👤 Customer Details</h3>
+      <p><strong>Name:</strong> ${user.name}</p>
+      <p><strong>Email:</strong> ${user.email}</p>
+      <p><strong>Mobile:</strong> ${selectedAddress.phoneNumber}</p>
+
+      <h3>📦 Delivery Address</h3>
+      <p>
+        Country: ${selectedAddress.countryName}<br>
+        State: ${selectedAddress.state}<br>
+        Town/City: ${selectedAddress.town}<br>
+        Area: ${selectedAddress.area}<br>
+        Landmark: ${selectedAddress.landmark || "N/A"}<br>
+        Pincode: ${selectedAddress.pincode}<br>
+        House No: ${selectedAddress.houseNo || "N/A"}
+      </p>
+
+      <h3>🧾 Ordered Products</h3>
+      ${data.items
+        .map(
+          (i) => `
         <p>
-          Country: ${selectedAddress.countryName}<br>
-          State: ${selectedAddress.state}<br>
-          Town/City: ${selectedAddress.town}<br>
-          Area: ${selectedAddress.area}<br>
-          Landmark: ${selectedAddress.landmark || "N/A"}<br>
-          Pincode: ${selectedAddress.pincode}<br>
-          House No: ${selectedAddress.houseNo || "N/A"}
-        </p>
+          <strong>Product Name:</strong> ${i.name}<br>
+          <strong>Product Price (per unit):</strong> ₹${i.price}<br>
+          <strong>Quantity:</strong> ${i.quantity}<br>
+          ${
+            i.weightInGrams
+              ? `<strong>Weight:</strong> ${i.weightInGrams} grams<br>`
+              : ""
+          }
+          <strong>Total for this product:</strong> ₹${i.priceWithQuantity}
+        </p><hr>
+      `
+        )
+        .join("")}
 
-        <h3>🧾 Ordered Products</h3>
-        ${data.items
-          .map(
-            (i) => `
-          <p>
-            <strong>Product Name:</strong> ${i.name}<br>
-            <strong>Product Price (per unit):</strong> ₹${i.price}<br>
-            <strong>Quantity:</strong> ${i.quantity}<br>
-            ${
-              i.weightInGrams
-                ? `<strong>Weight:</strong> ${i.weightInGrams} grams<br>`
-                : ""
-            }
-            <strong>Total for this product:</strong> ₹${i.priceWithQuantity}
-          </p><hr>
-        `
-          )
-          .join("")}
+      <h3>💰 Total Order Amount: ₹${data.items.reduce(
+        (sum, i) => sum + i.priceWithQuantity,
+        0
+      )}</h3>
+    `;
 
-        <h3>💰 Total Order Amount: ₹${data.items.reduce(
-          (sum, i) => sum + i.priceWithQuantity,
-          0
-        )}</h3>
-      `;
+    // 🔹 Send email but with timeout safeguard
+    await Promise.race([
+      sendEmailToShopOwner(ownerEmail, "New Order from PoketStor", html),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Email timeout")), 10000) // 10s limit
+      ),
+    ]);
 
-      await sendEmailToShopOwner(ownerEmail, "New Order from PoketStor", html);
-    }
+    console.log(`✅ Email sent to shop owner: ${ownerEmail}`);
+  } catch (err) {
+    console.error(`❌ Failed to send email to shop ${shopId}:`, err.message);
+    // Don't stop the whole order process, just continue
+  }
+}
+
+
+    // for (let [shopId, data] of shopWiseMap.entries()) {
+    //   const ownerEmail = data.shop.email;
+
+    //   const html = `
+    //     <h2>🛒 New Order Received</h2>
+    //     <h3>👤 Customer Details</h3>
+    //     <p><strong>Name:</strong> ${user.name}</p>
+    //     <p><strong>Email:</strong> ${user.email}</p>
+    //     <p><strong>Mobile:</strong> ${selectedAddress.phoneNumber}</p>
+
+    //     <h3>📦 Delivery Address</h3>
+    //     <p>
+    //       Country: ${selectedAddress.countryName}<br>
+    //       State: ${selectedAddress.state}<br>
+    //       Town/City: ${selectedAddress.town}<br>
+    //       Area: ${selectedAddress.area}<br>
+    //       Landmark: ${selectedAddress.landmark || "N/A"}<br>
+    //       Pincode: ${selectedAddress.pincode}<br>
+    //       House No: ${selectedAddress.houseNo || "N/A"}
+    //     </p>
+
+    //     <h3>🧾 Ordered Products</h3>
+    //     ${data.items
+    //       .map(
+    //         (i) => `
+    //       <p>
+    //         <strong>Product Name:</strong> ${i.name}<br>
+    //         <strong>Product Price (per unit):</strong> ₹${i.price}<br>
+    //         <strong>Quantity:</strong> ${i.quantity}<br>
+    //         ${
+    //           i.weightInGrams
+    //             ? `<strong>Weight:</strong> ${i.weightInGrams} grams<br>`
+    //             : ""
+    //         }
+    //         <strong>Total for this product:</strong> ₹${i.priceWithQuantity}
+    //       </p><hr>
+    //     `
+    //       )
+    //       .join("")}
+
+    //     <h3>💰 Total Order Amount: ₹${data.items.reduce(
+    //       (sum, i) => sum + i.priceWithQuantity,
+    //       0
+    //     )}</h3>
+    //   `;
+
+    //   await sendEmailToShopOwner(ownerEmail, "New Order from PoketStor", html);
+    // }
 
     // =============================================================================================
     // 📝 SAVE ORDER TO DB
