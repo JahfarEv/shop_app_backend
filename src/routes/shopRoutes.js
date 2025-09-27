@@ -10,7 +10,7 @@ router.post("/", upload.single("headerImage"), shopController.createShop); // Cr
 router.post("/send-shop-otp", shopController.sendShopOtp);
 router.post("/verify-shop-otp", shopController.verifyShopOtp);
 
-router.get("/", shopController.getShops); // Get all shops
+router.get("/",verifyToken, shopController.getShops); // Get all shops
 router.get("/nearby/:userId", shopController.getNearbyShops);
 router.get("/search/:term/:userId", shopController.searchShopController);
 router.get("/by-user", verifyToken, shopController.getShopByUser);

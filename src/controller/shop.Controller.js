@@ -1251,6 +1251,7 @@ else if (matchedManager) {
 // get all shops for user module not for admin pannel
 
 const getShops = async (req, res) => {
+  
   try {
     const shops = await Shop.find({ isBanned: false }); // ✅ Exclude banned shops
     res.status(200).json(shops);

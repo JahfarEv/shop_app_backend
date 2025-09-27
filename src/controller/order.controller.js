@@ -106,6 +106,7 @@ console.log("Step 4: Sending emails...");
 for (let [shopId, data] of shopWiseMap.entries()) {
   try {
     const ownerEmail = data.shop.email;
+console.log(ownerEmail,'mail');
 
     const html = `
       <h2>🛒 New Order Received</h2>
